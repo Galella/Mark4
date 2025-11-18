@@ -26,15 +26,19 @@ class ActivityLogService
             return;
         }
 
+        $userId = Auth::id();
+        $ipAddress = Request::ip() ?? null;
+        $userAgent = Request::userAgent() ?? null;
+
         ActivityLog::create([
-            'user_id' => Auth::id(),
+            'user_id' => $userId,
             'action' => $action,
             'module' => $module,
             'description' => $description,
             'old_values' => $oldValues,
             'new_values' => $newValues,
-            'ip_address' => Request::ip(),
-            'user_agent' => Request::userAgent(),
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
         ]);
     }
 

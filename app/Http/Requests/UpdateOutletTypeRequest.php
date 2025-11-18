@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class UpdateOutletTypeRequest extends FormRequest
 {
@@ -12,9 +13,10 @@ class UpdateOutletTypeRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
-        
-        return $user->isSuperAdmin();
+
+        return $user->isSuperAdmin() || $user->isAdminWilayah() || $user->isAdminArea();
     }
 
     /**
@@ -23,7 +25,12 @@ class UpdateOutletTypeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', 'unique:outlet_types,name,' . $this->outletType->id],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('outlet_types')->ignore($this->outlet_type->id)
+            ],
             'description' => ['nullable', 'string'],
         ];
     }

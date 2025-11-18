@@ -48,7 +48,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/outlets/export', [OutletController::class, 'export'])->name('outlets.export')->middleware(['can:viewAny,App\Models\Outlet']);
 
     // Outlet type management routes
-    Route::resource('outlet-types', OutletTypeController::class)->middleware(['can:viewAny,App\Models\OutletType']);
+    Route::resource('outlet-types', OutletTypeController::class);
     Route::get('/outlet-types/export', [OutletTypeController::class, 'export'])->name('outlet-types.export')->middleware(['can:viewAny,App\Models\OutletType']);
 
     // Daily income routes - only for admin outlet

@@ -92,19 +92,38 @@ class OutletTypeController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, OutletType $outletType)
+    public function update(UpdateOutletTypeRequest $request, OutletType $outletType)
     {
-        $this->authorize('update', $outletType);
+        try {
+            $this->authorize('update', $outletType);
+        } catch (\Exception $e) {
+            \Log::error('Authorization failed for outlet type update: ' . $e->getMessage());
+            abort(403, 'Unauthorized');
+        }
 
         $validatedData = $request->validated();
 
-        // Log outlet type update activity
-        $oldData = $outletType->toArray();
+        // Ensure the data is properly formatted for logging
+        $oldData = array_intersect_key($outletType->getAttributes(), array_flip($outletType->getFillable()));
+        // Add the ID manually
+        $oldData['id'] = $outletType->id;
         $newData = array_merge($oldData, $validatedData);
 
-        $outletType->update($validatedData);
+        // Update the outlet type with error handling
+        try {
+            $outletType->update($validatedData);
+        } catch (\Exception $e) {
+            \Log::error('Failed to update outlet type: ' . $e->getMessage());
+            return redirect()->route('outlet-types.index')->with('error', 'Failed to update outlet type.');
+        }
 
-        $this->activityLogService->logOutletTypeUpdated($oldData, $newData);
+        // Log the activity with error handling in case of serialization issues
+        try {
+            $this->activityLogService->logOutletTypeUpdated($oldData, $newData);
+        } catch (\Exception $e) {
+            \Log::error('Failed to log outlet type update activity: ' . $e->getMessage() . ' | Old data: ' . json_encode($oldData) . ' | New data: ' . json_encode($newData));
+            // Continue with the request even if logging fails
+        }
 
         return redirect()->route('outlet-types.index')->with('success', 'Outlet type updated successfully.');
     }

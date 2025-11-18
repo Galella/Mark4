@@ -13,8 +13,8 @@ class CreateOutletTypeRequest extends FormRequest
     public function authorize(): bool
     {
         $user = Auth::user();
-        
-        return $user->isSuperAdmin();
+
+        return $user->isSuperAdmin() || $user->isAdminWilayah() || $user->isAdminArea();
     }
 
     /**
