@@ -24,6 +24,27 @@
                 @endcan
             </div>
         </div>
+        <!-- Outlet Type Statistics -->
+        @if(count($outletTypeStats) > 0)
+        <div class="card-body border-bottom">
+            <div class="row">
+                @foreach($outletTypeStats as $stat)
+                    <div class="col-md-3 col-sm-6 col-12">
+                        <div class="info-box">
+                            <span class="info-box-icon bg-info elevation-1">
+                                <i class="fas fa-store"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">{{ $stat['type']->name }}</span>
+                                <span class="info-box-number">{{ $stat['count'] }} Outlet{!! $stat['count'] != 1 ? 's' : '' !!}</span>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
         <!-- Filter and Search Form -->
         <div class="card-body border-bottom">
             <form method="GET" action="{{ route('outlets.index') }}" class="form-inline">

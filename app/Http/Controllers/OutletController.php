@@ -76,7 +76,18 @@ class OutletController extends Controller
         $offices = Office::all();
         $outletTypes = OutletType::all();
 
-        return view('outlets.index', compact('outlets', 'offices', 'outletTypes'));
+        // Hitung jumlah outlet berdasarkan tipe
+        $outletTypeStats = [];
+        foreach ($outletTypes as $type) {
+            $countQuery = clone $query;
+            $count = $countQuery->where('outlet_type_id', $type->id)->count();
+            $outletTypeStats[] = [
+                'type' => $type,
+                'count' => $count
+            ];
+        }
+
+        return view('outlets.index', compact('outlets', 'offices', 'outletTypes', 'outletTypeStats'));
     }
 
     /**
