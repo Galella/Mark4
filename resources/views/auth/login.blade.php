@@ -67,11 +67,6 @@
                         <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" placeholder="Password" required autocomplete="current-password">
                         <div class="input-group-append">
                             <div class="input-group-text">
-                                <span class="fas fa-lock"></span>
-                            </div>
-                        </div>
-                        <div class="input-group-append">
-                            <div class="input-group-text">
                                 <a href="#" id="togglePassword" style="text-decoration: none; color: #6c757d;">
                                     <i class="fas fa-eye" id="eyeIcon"></i>
                                 </a>
