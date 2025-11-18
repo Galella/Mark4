@@ -32,6 +32,9 @@
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         }
+        #togglePassword {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="hold-transition login-page">
@@ -61,10 +64,17 @@
                         @enderror
                     </div>
                     <div class="input-group mb-3">
-                        <input type="password" name="password" class="form-control @error('password') is-invalid @enderror" placeholder="Password" required autocomplete="current-password">
+                        <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" placeholder="Password" required autocomplete="current-password">
                         <div class="input-group-append">
                             <div class="input-group-text">
                                 <span class="fas fa-lock"></span>
+                            </div>
+                        </div>
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                <a href="#" id="togglePassword" style="text-decoration: none; color: #6c757d;">
+                                    <i class="fas fa-eye" id="eyeIcon"></i>
+                                </a>
                             </div>
                         </div>
                         @error('password')
@@ -107,5 +117,28 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js"></script>
     <!-- AdminLTE App -->
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const togglePassword = document.getElementById('togglePassword');
+            const password = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+
+            togglePassword.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                // Toggle password visibility
+                if (password.type === 'password') {
+                    password.type = 'text';
+                    eyeIcon.classList.remove('fa-eye');
+                    eyeIcon.classList.add('fa-eye-slash');
+                } else {
+                    password.type = 'password';
+                    eyeIcon.classList.remove('fa-eye-slash');
+                    eyeIcon.classList.add('fa-eye');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
