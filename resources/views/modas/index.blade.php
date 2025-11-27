@@ -73,12 +73,13 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="text-center">No modas found</td>
+                                <td colspan="5" class="text-center">No modas found</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+
             <!-- Pagination -->
             <div class="mt-4 d-flex justify-content-between align-items-center">
                 <div class="table-info-text">
@@ -90,13 +91,32 @@
                     @else
                         <li class="page-item"><a class="page-link" href="{{ $modas->previousPageUrl() }}">&laquo;</a></li>
                     @endif
-                    
-                    @for ($i = 1; $i <= $modas->lastPage(); $i++)
+
+                    @php
+                        $start = max(1, $modas->currentPage() - 2);
+                        $end = min($modas->lastPage(), $modas->currentPage() + 2);
+                    @endphp
+
+                    @if ($start > 1)
+                        <li class="page-item"><a class="page-link" href="{{ $modas->url(1) }}">1</a></li>
+                        @if ($start > 2)
+                            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                        @endif
+                    @endif
+
+                    @for ($i = $start; $i <= $end; $i++)
                         <li class="page-item {{ $i == $modas->currentPage() ? 'active' : '' }}">
                             <a class="page-link" href="{{ $modas->url($i) }}">{{ $i }}</a>
                         </li>
                     @endfor
-                    
+
+                    @if ($end < $modas->lastPage())
+                        @if ($end < $modas->lastPage() - 1)
+                            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                        @endif
+                        <li class="page-item"><a class="page-link" href="{{ $modas->url($modas->lastPage()) }}">{{ $modas->lastPage() }}</a></li>
+                    @endif
+
                     @if ($modas->hasMorePages())
                         <li class="page-item"><a class="page-link" href="{{ $modas->nextPageUrl() }}">&raquo;</a></li>
                     @else

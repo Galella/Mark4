@@ -48,10 +48,8 @@ class IncomeTargetPolicy
      */
     public function create(User $user): bool
     {
-        // Super admin, admin wilayah, and admin area can create targets
-        return $user->isSuperAdmin() ||
-               $user->isAdminWilayah() ||
-               $user->isAdminArea();
+        // All roles except admin outlet can create targets
+        return !$user->isAdminOutlet();
     }
 
     /**

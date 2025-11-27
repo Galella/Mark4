@@ -91,7 +91,7 @@
                         <!-- /.filter form -->
 
                         <div class="table-responsive">
-                            <table id="targetRealizationTable" class="table table-hover">
+                            <table class="table table-hover">
                                 <thead>
                                     <tr>
                                         <th>Nama Outlet</th>
@@ -103,34 +103,87 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($reportData as $data)
-                                        <tr>
-                                            <td>{{ $data['outlet_name'] }}</td>
-                                            <td>{{ $availableMonths[$selectedMonth] ?? '' }} {{ $selectedYear }}</td>
-                                            <td>Rp {{ number_format($data['target'], 0, ',', '.') }}</td>
-                                            <td>Rp {{ number_format($data['realization'], 0, ',', '.') }}</td>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="progress flex-grow-1 mr-2" style="min-width: 100px;">
-                                                        <div class="progress-bar" role="progressbar"
-                                                            style="width: {{ min($data['progress'], 100) }}%; 
-                                                     background-color: {{ $data['progress'] >= 100 ? '#28a745' : ($data['progress'] >= 80 ? '#ffc107' : '#dc3545') }};">
+                                    @if(isset($reportData) && is_iterable($reportData))
+                                        @foreach ($reportData as $data)
+                                            <tr>
+                                                <td>{{ $data['outlet_name'] }}</td>
+                                                <td>{{ $availableMonths[$selectedMonth] ?? '' }} {{ $selectedYear }}</td>
+                                                <td>Rp {{ number_format($data['target'], 0, ',', '.') }}</td>
+                                                <td>Rp {{ number_format($data['realization'], 0, ',', '.') }}</td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="progress flex-grow-1 mr-2" style="min-width: 100px;">
+                                                            <div class="progress-bar" role="progressbar"
+                                                                style="width: {{ min($data['progress'], 100) }}%;
+                                                         background-color: {{ $data['progress'] >= 100 ? '#28a745' : ($data['progress'] >= 80 ? '#ffc107' : '#dc3545') }};">
+                                                            </div>
                                                         </div>
+                                                        <span class="text-nowrap">{{ round($data['progress'], 2) }}%</span>
                                                     </div>
-                                                    <span class="text-nowrap">{{ round($data['progress'], 2) }}%</span>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span
-                                                    class="badge badge-{{ $data['status'] === 'Achieved' ? 'success' : ($data['status'] === 'On Track' ? 'warning' : 'danger') }}">
-                                                    {{ $data['status'] }}
-                                                </span>
-                                            </td>
+                                                </td>
+                                                <td>
+                                                    <span
+                                                        class="badge badge-{{ $data['status'] === 'Achieved' ? 'success' : ($data['status'] === 'On Track' ? 'warning' : 'danger') }}">
+                                                        {{ $data['status'] }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @else
+                                        <tr>
+                                            <td colspan="6" class="text-center">No data available</td>
                                         </tr>
-                                    @endforeach
+                                    @endif
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Pagination -->
+                        @if(isset($reportData) && method_exists($reportData, 'hasPages') && $reportData->hasPages())
+                        <div class="mt-4 d-flex justify-content-between align-items-center">
+                            <div class="table-info-text">
+                                Showing {{ $reportData->firstItem() }} to {{ $reportData->lastItem() }} of {{ $reportData->total() }} results
+                            </div>
+                            <ul class="pagination pagination-sm m-0">
+                                @if ($reportData->onFirstPage())
+                                    <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
+                                @else
+                                    <li class="page-item"><a class="page-link" href="{{ $reportData->previousPageUrl() }}">&laquo;</a></li>
+                                @endif
+
+                                @php
+                                    $start = max(1, $reportData->currentPage() - 2);
+                                    $end = min($reportData->lastPage(), $reportData->currentPage() + 2);
+                                @endphp
+
+                                @if ($start > 1)
+                                    <li class="page-item"><a class="page-link" href="{{ $reportData->url(1) }}">1</a></li>
+                                    @if ($start > 2)
+                                        <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                                    @endif
+                                @endif
+
+                                @for ($i = $start; $i <= $end; $i++)
+                                    <li class="page-item {{ $i == $reportData->currentPage() ? 'active' : '' }}">
+                                        <a class="page-link" href="{{ $reportData->url($i) }}">{{ $i }}</a>
+                                    </li>
+                                @endfor
+
+                                @if ($end < $reportData->lastPage())
+                                    @if ($end < $reportData->lastPage() - 1)
+                                        <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                                    @endif
+                                    <li class="page-item"><a class="page-link" href="{{ $reportData->url($reportData->lastPage()) }}">{{ $reportData->lastPage() }}</a></li>
+                                @endif
+
+                                @if ($reportData->hasMorePages())
+                                    <li class="page-item"><a class="page-link" href="{{ $reportData->nextPageUrl() }}">&raquo;</a></li>
+                                @else
+                                    <li class="page-item disabled"><a class="page-link" href="#">&raquo;</a></li>
+                                @endif
+                            </ul>
+                        </div>
+                        @endif
                     </div>
                     <!-- /.card-body -->
                 </div>
@@ -141,19 +194,8 @@
 @endsection
 
 @section('scripts')
-    <!-- DataTables & Bootstrap 4 -->
-    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
-
     <script>
         $(function() {
-            $("#targetRealizationTable").DataTable({
-                "responsive": true,
-                "lengthChange": false,
-                "autoWidth": false
-            });
-
             // Filter button click event
             $('#filterBtn').on('click', function() {
                 var year = $('#year').val();

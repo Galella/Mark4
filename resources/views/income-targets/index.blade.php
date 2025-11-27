@@ -15,8 +15,11 @@
             <h3 class="card-title">Income Targets List</h3>
             <div class="card-tools">
                 @can('create', \App\Models\IncomeTarget::class)
-                    <a href="{{ route('income-targets.create') }}" class="btn btn-primary">
+                    <a href="{{ route('income-targets.create') }}" class="btn btn-primary mr-2">
                         <i class="fas fa-plus"></i> Create New Target
+                    </a>
+                    <a href="{{ route('income-targets.import.form') }}" class="btn btn-success">
+                        <i class="fas fa-file-import"></i> Import Excel
                     </a>
                 @endcan
             </div>
@@ -132,11 +135,30 @@
                         <li class="page-item"><a class="page-link" href="{{ $targets->previousPageUrl() }}">&laquo;</a></li>
                     @endif
 
-                    @for ($i = 1; $i <= $targets->lastPage(); $i++)
+                    @php
+                        $start = max(1, $targets->currentPage() - 2);
+                        $end = min($targets->lastPage(), $targets->currentPage() + 2);
+                    @endphp
+
+                    @if ($start > 1)
+                        <li class="page-item"><a class="page-link" href="{{ $targets->url(1) }}">1</a></li>
+                        @if ($start > 2)
+                            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                        @endif
+                    @endif
+
+                    @for ($i = $start; $i <= $end; $i++)
                         <li class="page-item {{ $i == $targets->currentPage() ? 'active' : '' }}">
                             <a class="page-link" href="{{ $targets->url($i) }}">{{ $i }}</a>
                         </li>
                     @endfor
+
+                    @if ($end < $targets->lastPage())
+                        @if ($end < $targets->lastPage() - 1)
+                            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                        @endif
+                        <li class="page-item"><a class="page-link" href="{{ $targets->url($targets->lastPage()) }}">{{ $targets->lastPage() }}</a></li>
+                    @endif
 
                     @if ($targets->hasMorePages())
                         <li class="page-item"><a class="page-link" href="{{ $targets->nextPageUrl() }}">&raquo;</a></li>

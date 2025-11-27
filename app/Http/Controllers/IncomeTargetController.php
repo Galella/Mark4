@@ -7,6 +7,7 @@ use App\Models\Outlet;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Services\ActivityLogService;
 use App\Http\Requests\CreateIncomeTargetRequest;
 use App\Http\Requests\UpdateIncomeTargetRequest;
@@ -319,6 +320,58 @@ class IncomeTargetController extends Controller
         );
 
         return redirect()->route('income-targets.index')->with('success', 'Income target updated successfully.');
+    }
+
+    /**
+     * Show the import form.
+     */
+    public function showImportForm()
+    {
+        $user = Auth::user();
+
+        // Check authorization using gates/policies
+        $canCreate = $user->can('create', IncomeTarget::class);
+
+        if (!$canCreate) {
+            abort(403, 'Unauthorized access to import feature');
+        }
+
+        return view('income-targets.import');
+    }
+
+    /**
+     * Import income targets from Excel file.
+     */
+    public function import(Request $request)
+    {
+        $this->authorize('create', IncomeTarget::class);
+
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:10240', // max 10MB
+        ]);
+
+        try {
+            $file = $request->file('file');
+
+            // Import the file using our custom import class
+            $import = new \App\Imports\IncomeTargetImport();
+            \Maatwebsite\Excel\Facades\Excel::import($import, $file);
+
+            $successCount = $import->successCount ?? 0;
+            $errors = $import->errors ?? [];
+
+            if (!empty($errors)) {
+                return back()->withErrors(['errors' => $errors])
+                             ->withInput()
+                             ->with('error_count', count($errors))
+                             ->with('success_count', $successCount);
+            }
+
+            return redirect()->route('income-targets.index')
+                             ->with('success', "Successfully imported {$successCount} income target(s) from Excel file.");
+        } catch (\Exception $e) {
+            return back()->withErrors(['file' => 'Error importing file: ' . $e->getMessage()]);
+        }
     }
 
     /**

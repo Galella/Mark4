@@ -17,7 +17,7 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
-        
+
         // Inisialisasi variabel
         $totalOffices = 0;
         $totalOutlets = 0;
@@ -26,7 +26,7 @@ class DashboardController extends Controller
         $offices = collect();
         $outlets = collect();
         $recentActivities = collect();
-        
+
         if ($user->isSuperAdmin()) {
             // Super admin melihat data nasional
             $totalOffices = Office::count();
@@ -35,56 +35,54 @@ class DashboardController extends Controller
             $offices = Office::with('parent')->limit(5)->get();
             $outlets = Outlet::with(['office', 'outletType'])->limit(5)->get();
             $recentActivities = collect(); // Kita akan implementasi log aktivitas nanti
-            
+
         } elseif ($user->isAdminWilayah()) {
             // Admin wilayah melihat data di wilayahnya
             $officeIds = $user->office->children()->pluck('id');
             $officeIds[] = $user->office->id; // Tambahkan office wilayah sendiri
-            
+
             $totalOffices = Office::whereIn('id', $officeIds)->count();
             $totalOutlets = Outlet::whereIn('office_id', $officeIds)->count();
-            $totalUsers = User::where(function($query) use ($officeIds) {
+            $totalUsers = User::where(function ($query) use ($officeIds) {
                 $query->whereIn('office_id', $officeIds)
-                      ->orWhereIn('outlet_id', Outlet::whereIn('office_id', $officeIds)->pluck('id'));
+                    ->orWhereIn('outlet_id', Outlet::whereIn('office_id', $officeIds)->pluck('id'));
             })->count();
-            
+
             $offices = Office::whereIn('id', $officeIds)->with('parent')->limit(5)->get();
             $outlets = Outlet::whereIn('office_id', $officeIds)
-                            ->with(['office', 'outletType'])
-                            ->limit(5)
-                            ->get();
-                            
+                ->with(['office', 'outletType'])
+                ->limit(5)
+                ->get();
         } elseif ($user->isAdminArea()) {
             // Admin area melihat data di areanya
             $totalOffices = 1; // Office area sendiri
             $totalOutlets = $user->office->outlets()->count();
             $totalUsers = User::where('office_id', $user->office_id)
-                           ->orWhereIn('outlet_id', $user->office->outlets()->pluck('id'))
-                           ->count();
-                           
+                ->orWhereIn('outlet_id', $user->office->outlets()->pluck('id'))
+                ->count();
+
             $offices = collect([$user->office]); // Hanya office area sendiri
             $outlets = $user->office->outlets()->with('outletType')->limit(5)->get();
-            
         } elseif ($user->isAdminOutlet()) {
             // Admin outlet melihat data outletnya
             $totalOffices = 0; // Tidak perlu menampilkan office
             $totalOutlets = 1; // Outlet sendiri
             $totalUsers = User::where('outlet_id', $user->outlet_id)->count();
             $totalOutletTypes = OutletType::count();
-            
+
             $outlets = collect([$user->outlet]); // Hanya outlet sendiri
         }
-        
+
         // Ambil data untuk grafik - bervariasi berdasarkan role
         $chartData = $this->getChartData($user);
-        
+
         // Calculate target progress data
         $targetProgressData = $this->getTargetProgressData($user);
 
         return view('dashboard', compact(
-            'totalOffices', 
-            'totalOutlets', 
-            'totalUsers', 
+            'totalOffices',
+            'totalOutlets',
+            'totalUsers',
             'totalOutletTypes',
             'offices',
             'outlets',
@@ -93,7 +91,7 @@ class DashboardController extends Controller
             'targetProgressData'
         ));
     }
-    
+
     private function getChartData($user)
     {
         // Data chart akan bervariasi berdasarkan role
@@ -106,15 +104,15 @@ class DashboardController extends Controller
             // Data untuk admin wilayah - tampilkan data area di wilayahnya
             $areas = $user->office->children;
             $labels = $areas->pluck('name')->toArray();
-            $data = $areas->map(function($area) {
+            $data = $areas->map(function ($area) {
                 return $area->outlets()->count();
             })->toArray();
         } elseif ($user->isAdminArea()) {
             // Data untuk admin area - tampilkan tipe outlet di areanya
-            $outletTypes = OutletType::withCount(['outlets' => function($query) use ($user) {
+            $outletTypes = OutletType::withCount(['outlets' => function ($query) use ($user) {
                 $query->where('office_id', $user->office_id);
             }])->get();
-            
+
             $labels = $outletTypes->pluck('name')->toArray();
             $data = $outletTypes->pluck('outlets_count')->toArray();
         } else {
@@ -122,7 +120,7 @@ class DashboardController extends Controller
             $labels = [$user->outlet->name];
             $data = [1];
         }
-        
+
         return [
             'labels' => $labels,
             'data' => $data
@@ -134,9 +132,9 @@ class DashboardController extends Controller
         // Query untuk menghitung actual income dan target untuk bulan ini
         $currentYear = now()->year;
         $currentMonth = now()->month;
-        
+
         $query = DailyIncome::query();
-        
+
         // Apply user-based access control
         if ($user->isAdminOutlet()) {
             $query->where('outlet_id', $user->outlet_id);
@@ -144,79 +142,79 @@ class DashboardController extends Controller
             $outletIds = $user->office->outlets()->pluck('id');
             $query->whereIn('outlet_id', $outletIds);
         } elseif ($user->isAdminWilayah()) {
-            $outletIds = Outlet::whereHas('office', function($q) use ($user) {
+            $outletIds = Outlet::whereHas('office', function ($q) use ($user) {
                 $q->where('parent_id', $user->office_id)
-                  ->orWhere('id', $user->office_id);
+                    ->orWhere('id', $user->office_id);
             })->pluck('id');
             $query->whereIn('outlet_id', $outletIds);
         }
         // Super admin gets all
-        
+
         $actualIncome = $query
             ->whereYear('date', $currentYear)
             ->whereMonth('date', $currentMonth)
             ->sum('income');
-        
+
         // Get target for the same period
         $targetQuery = IncomeTarget::query();
-        
+
         if ($user->isAdminOutlet()) {
             $targetQuery->where('outlet_id', $user->outlet_id);
         } elseif ($user->isAdminArea()) {
             $outletIds = $user->office->outlets()->pluck('id');
             $targetQuery->whereIn('outlet_id', $outletIds);
         } elseif ($user->isAdminWilayah()) {
-            $outletIds = Outlet::whereHas('office', function($q) use ($user) {
+            $outletIds = Outlet::whereHas('office', function ($q) use ($user) {
                 $q->where('parent_id', $user->office_id)
-                  ->orWhere('id', $user->office_id);
+                    ->orWhere('id', $user->office_id);
             })->pluck('id');
             $targetQuery->whereIn('outlet_id', $outletIds);
         }
         // Super admin gets all
-        
+
         $targetAmount = $targetQuery
             ->where('target_year', $currentYear)
             ->where('target_month', $currentMonth)
             ->sum('target_amount');
-        
+
         // Calculate progress percentage
         $progressPercentage = $targetAmount > 0 ? ($actualIncome / $targetAmount) * 100 : 0;
         $progressPercentage = min($progressPercentage, 100); // Cap at 100%
-        
+
         // Calculate additional target statistics
         $targetRemaining = max(0, $targetAmount - $actualIncome);
         $targetDifference = $actualIncome - $targetAmount; // Positive if exceeded, negative if below
-        
+
         // Get targets for next month if available
         $nextMonth = $currentMonth == 12 ? 1 : $currentMonth + 1;
         $nextYear = $currentMonth == 12 ? $currentYear + 1 : $currentYear;
-        
+
         $nextMonthTarget = $targetQuery
             ->where('target_year', $nextYear)
             ->where('target_month', $nextMonth)
             ->sum('target_amount');
-        
+
         // Count outlets with targets vs total outlets
         $outletsWithTargets = $targetQuery
             ->where('target_year', $currentYear)
             ->where('target_month', $currentMonth)
             ->distinct('outlet_id')
             ->count('outlet_id');
-        
+
         $totalOutletsForUser = 0;
         if ($user->isAdminOutlet()) {
             $totalOutletsForUser = 1;
         } elseif ($user->isAdminArea()) {
             $totalOutletsForUser = $user->office->outlets()->count();
         } elseif ($user->isAdminWilayah()) {
-            $totalOutletsForUser = Outlet::whereHas('office', function($q) use ($user) {
+            $totalOutletsForUser = Outlet::whereHas('office', function ($q) use ($user) {
                 $q->where('parent_id', $user->office_id)
-                  ->orWhere('id', $user->office_id);
+                    ->orWhere('id', $user->office_id);
             })->count();
         } elseif ($user->isSuperAdmin()) {
             $totalOutletsForUser = Outlet::count();
         }
-        
+
         return [
             'actual_income' => $actualIncome,
             'target_amount' => $targetAmount,
@@ -248,9 +246,9 @@ class DashboardController extends Controller
             }
             // Admin wilayah can see incomes for their area
             elseif ($user->isAdminWilayah()) {
-                $outletIds = Outlet::whereHas('office', function($q) use ($user) {
+                $outletIds = Outlet::whereHas('office', function ($q) use ($user) {
                     $q->where('parent_id', $user->office_id)
-                      ->orWhere('id', $user->office_id);
+                        ->orWhere('id', $user->office_id);
                 })->pluck('id');
                 $query->whereIn('outlet_id', $outletIds);
             }
@@ -283,7 +281,7 @@ class DashboardController extends Controller
             $date = today()->subDays($i);
             $incomeQuery = clone $query;
             $dayIncome = $incomeQuery->whereDate('date', $date)->sum('income');
-            
+
             $incomeTrend[] = $dayIncome;
             $incomeLabels[] = $date->format('D');
         }
@@ -291,13 +289,13 @@ class DashboardController extends Controller
         // Get income by moda
         $incomeByModa = [];
         $modaLabels = [];
-        
+
         $modaQuery = clone $query;
         $modaData = $modaQuery->selectRaw('moda_id, SUM(income) as total_income')
-                             ->groupBy('moda_id')
-                             ->with(['moda'])
-                             ->get();
-        
+            ->groupBy('moda_id')
+            ->with(['moda'])
+            ->get();
+
         foreach ($modaData as $modaIncome) {
             if ($modaIncome->moda) {
                 $incomeByModa[] = $modaIncome->total_income;
@@ -308,20 +306,20 @@ class DashboardController extends Controller
         // Get income by outlet (for other charts)
         $incomeByOutlet = [];
         $outletLabels = [];
-        
+
         $outletQuery = clone $query;
         $outletData = $outletQuery->selectRaw('outlet_id, SUM(income) as total_income')
-                                  ->groupBy('outlet_id')
-                                  ->with(['outlet'])
-                                  ->get();
-        
+            ->groupBy('outlet_id')
+            ->with(['outlet'])
+            ->get();
+
         foreach ($outletData as $outletIncome) {
             if ($outletIncome->outlet) {
                 $incomeByOutlet[] = $outletIncome->total_income;
                 $outletLabels[] = $outletIncome->outlet->name;
             }
         }
-        
+
         // Get total income by month (simple bar chart showing total income per month)
         $monthlyIncomeData = $query
             ->selectRaw("
@@ -329,7 +327,7 @@ class DashboardController extends Controller
                 MONTH(date) as month,
                 SUM(income) as total_income
             ")
-            ->where('date', '>=', now()->subMonths(5)->startOfMonth()) // Last 6 months
+            ->where('date', '>=', now()->subMonths(12)->startOfMonth()) // Last 6 months
             ->groupBy('year', 'month')
             ->orderBy('year', 'asc')
             ->orderBy('month', 'asc')
@@ -342,8 +340,8 @@ class DashboardController extends Controller
                 [
                     'label' => 'Total Income',
                     'data' => [],
-                    'backgroundColor' => 'rgba(60, 141, 188, 0.9)',
-                    'borderColor' => 'rgba(60, 141, 188, 0.8)',
+                    'backgroundColor' => 'rgb(230, 117, 20)',
+                    'borderColor' => 'rgb(230, 117, 20)',
                     'borderWidth' => 1
                 ]
             ]
@@ -360,10 +358,10 @@ class DashboardController extends Controller
         // Calculate today's colly and weight based on user access level
         $todayColly = 0;
         $todayWeight = 0;
-        
+
         // Create a fresh query for today's stats
         $todayStatsQuery = DailyIncome::query();
-        
+
         // Apply the same access control as the main query
         if ($user->isAdminOutlet()) {
             $todayStatsQuery->where('outlet_id', $user->outlet_id);
@@ -375,9 +373,9 @@ class DashboardController extends Controller
             }
             // Admin wilayah can see incomes for their area
             elseif ($user->isAdminWilayah()) {
-                $outletIds = Outlet::whereHas('office', function($q) use ($user) {
+                $outletIds = Outlet::whereHas('office', function ($q) use ($user) {
                     $q->where('parent_id', $user->office_id)
-                      ->orWhere('id', $user->office_id);
+                        ->orWhere('id', $user->office_id);
                 })->pluck('id');
                 $todayStatsQuery->whereIn('outlet_id', $outletIds);
             }
@@ -386,10 +384,10 @@ class DashboardController extends Controller
                 // No additional filter needed for super admin
             }
         }
-        
+
         // Add date filter for today
         $todayStatsQuery->whereDate('date', today());
-        
+
         $todayColly = $todayStatsQuery->sum('colly');
         $todayWeight = $todayStatsQuery->sum('weight');
 
@@ -477,7 +475,7 @@ class DashboardController extends Controller
     public function getIncomeByModaPerMonthAjax()
     {
         $user = auth()->user();
-        
+
         $query = DailyIncome::query();
 
         // Apply user-based access control
@@ -491,9 +489,9 @@ class DashboardController extends Controller
             }
             // Admin wilayah can see incomes for their area
             elseif ($user->isAdminWilayah()) {
-                $outletIds = \App\Models\Outlet::whereHas('office', function($q) use ($user) {
+                $outletIds = \App\Models\Outlet::whereHas('office', function ($q) use ($user) {
                     $q->where('parent_id', $user->office_id)
-                      ->orWhere('id', $user->office_id);
+                        ->orWhere('id', $user->office_id);
                 })->pluck('id');
                 $query->whereIn('outlet_id', $outletIds);
             }
@@ -519,7 +517,7 @@ class DashboardController extends Controller
         // Organize the data for the chart
         $allModas = \App\Models\Moda::all();
         $allMonths = [];
-        
+
         // Get unique months in the data
         foreach ($modaIncomeData as $item) {
             $monthKey = $item->year . '-' . str_pad($item->month, 2, '0', STR_PAD_LEFT);
@@ -527,31 +525,31 @@ class DashboardController extends Controller
                 $allMonths[] = $monthKey;
             }
         }
-        
+
         // Sort months chronologically
         sort($allMonths);
-        
+
         // Prepare chart data
         $chartData = [
-            'labels' => array_map(function($month) {
+            'labels' => array_map(function ($month) {
                 $date = \DateTime::createFromFormat('Y-m', $month);
                 return $date ? $date->format('M Y') : '';
             }, $allMonths),
             'datasets' => []
         ];
-        
+
         // Create a dataset for each moda
         foreach ($allModas as $moda) {
             $data = [];
             foreach ($allMonths as $month) {
-                $monthIncome = $modaIncomeData->first(function($item) use ($moda, $month) {
+                $monthIncome = $modaIncomeData->first(function ($item) use ($moda, $month) {
                     $itemMonth = $item->year . '-' . str_pad($item->month, 2, '0', STR_PAD_LEFT);
                     return $item->moda_id == $moda->id && $itemMonth == $month;
                 });
-                
+
                 $data[] = $monthIncome ? $monthIncome->total_income : 0;
             }
-            
+
             // Only add dataset if there's data for this moda
             if (array_sum($data) > 0) {
                 $chartData['datasets'][] = [
@@ -573,10 +571,13 @@ class DashboardController extends Controller
     private function getModaColor($modaId)
     {
         $colors = [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', 
-            '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+            '#9966FF',
+            '#FFCE56',
+            '#36A2EB',
+            '#FF6384'
+
         ];
-        
+
         return $colors[$modaId % count($colors)];
     }
 
@@ -586,10 +587,12 @@ class DashboardController extends Controller
     private function getModaBorderColor($modaId)
     {
         $colors = [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', 
-            '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+            '#9966FF',
+            '#FFCE56',
+            '#36A2EB',
+            '#FF6384'
         ];
-        
+
         return $colors[$modaId % count($colors)];
     }
 
@@ -599,11 +602,23 @@ class DashboardController extends Controller
     private function getOutletColor($outletId)
     {
         $colors = [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', 
-            '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384',
-            '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+            '#FF6384',
+            '#36A2EB',
+            '#FFCE56',
+            '#4BC0C0',
+            '#9966FF',
+            '#FF9F40',
+            '#FF6384',
+            '#C9CBCF',
+            '#4BC0C0',
+            '#FF6384',
+            '#36A2EB',
+            '#FFCE56',
+            '#4BC0C0',
+            '#9966FF',
+            '#FF9F40'
         ];
-        
+
         return $colors[$outletId % count($colors)];
     }
 
@@ -613,11 +628,23 @@ class DashboardController extends Controller
     private function getOutletBorderColor($outletId)
     {
         $colors = [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', 
-            '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384',
-            '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+            '#FF6384',
+            '#36A2EB',
+            '#FFCE56',
+            '#4BC0C0',
+            '#9966FF',
+            '#FF9F40',
+            '#FF6384',
+            '#C9CBCF',
+            '#4BC0C0',
+            '#FF6384',
+            '#36A2EB',
+            '#FFCE56',
+            '#4BC0C0',
+            '#9966FF',
+            '#FF9F40'
         ];
-        
+
         return $colors[$outletId % count($colors)];
     }
 }

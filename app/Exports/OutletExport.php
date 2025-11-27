@@ -24,20 +24,23 @@ class OutletExport implements FromCollection, WithHeadings, WithMapping
     {
         // Query outlets berdasarkan akses pengguna
         $query = Outlet::query();
-        
-        if ($this->user && $this->user->isAdminWilayah()) {
-            // Admin wilayah hanya bisa mengekspor outlet di wilayahnya
-            $officeIds = $this->user->office->children()->pluck('id');
-            $officeIds->push($this->user->office->id);
-            $query->whereIn('office_id', $officeIds);
-        } elseif ($this->user && $this->user->isAdminArea()) {
-            // Admin area hanya bisa mengekspor outlet di areanya
-            $query->where('office_id', $this->user->office_id);
-        } elseif ($this->user && $this->user->isAdminOutlet()) {
-            // Admin outlet hanya bisa mengekspor outletnya sendiri
-            $query->where('id', $this->user->outlet_id);
+
+        // Hanya proses filter jika user terotentikasi
+        if ($this->user) {
+            if ($this->user->isAdminWilayah()) {
+                // Admin wilayah hanya bisa mengekspor outlet di wilayahnya
+                $officeIds = $this->user->office->children()->pluck('id');
+                $officeIds->push($this->user->office->id);
+                $query->whereIn('office_id', $officeIds);
+            } elseif ($this->user->isAdminArea()) {
+                // Admin area hanya bisa mengekspor outlet di areanya
+                $query->where('office_id', $this->user->office_id);
+            } elseif ($this->user->isAdminOutlet()) {
+                // Admin outlet hanya bisa mengekspor outletnya sendiri
+                $query->where('id', $this->user->outlet_id);
+            }
         }
-        
+
         return $query->with(['office', 'outletType'])->get();
     }
 
@@ -72,8 +75,8 @@ class OutletExport implements FromCollection, WithHeadings, WithMapping
             $outlet->id,
             $outlet->name,
             $outlet->code,
-            $outlet->office->name,
-            $outlet->outletType->name,
+            $outlet->office->name ?? '-',
+            $outlet->outletType->name ?? '-',
             $outlet->address ?: '-',
             $outlet->phone ?: '-',
             $outlet->email ?: '-',

@@ -19,6 +19,10 @@
                         <i class="fas fa-plus"></i> Record New Income
                     </a>
                 @endif
+
+                <a href="{{ route('reports.daily-income.export') }}" class="btn btn-info">
+                    <i class="fas fa-file-excel"></i> Export
+                </a>
             </div>
         </div>
         <!-- Filter and Search Form -->
@@ -96,6 +100,7 @@
                     </tbody>
                 </table>
             </div>
+
             <!-- Pagination -->
             <div class="mt-4 d-flex justify-content-between align-items-center">
                 <div class="table-info-text">
@@ -103,21 +108,40 @@
                 </div>
                 <ul class="pagination pagination-sm m-0 float-right">
                     @if ($dailyIncomes->onFirstPage())
-                        <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
+                        <li class="page-item disabled"><a class="page-link" href="#">&laquo; Previous</a></li>
                     @else
-                        <li class="page-item"><a class="page-link" href="{{ $dailyIncomes->previousPageUrl() }}">&laquo;</a></li>
+                        <li class="page-item"><a class="page-link" href="{{ $dailyIncomes->previousPageUrl() }}">&laquo; Previous</a></li>
                     @endif
-                    
-                    @for ($i = 1; $i <= $dailyIncomes->lastPage(); $i++)
+
+                    @php
+                        $start = max(1, $dailyIncomes->currentPage() - 2);
+                        $end = min($dailyIncomes->lastPage(), $dailyIncomes->currentPage() + 2);
+                    @endphp
+
+                    @if ($start > 1)
+                        <li class="page-item"><a class="page-link" href="{{ $dailyIncomes->url(1) }}">1</a></li>
+                        @if ($start > 2)
+                            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                        @endif
+                    @endif
+
+                    @for ($i = $start; $i <= $end; $i++)
                         <li class="page-item {{ $i == $dailyIncomes->currentPage() ? 'active' : '' }}">
                             <a class="page-link" href="{{ $dailyIncomes->url($i) }}">{{ $i }}</a>
                         </li>
                     @endfor
-                    
+
+                    @if ($end < $dailyIncomes->lastPage())
+                        @if ($end < $dailyIncomes->lastPage() - 1)
+                            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                        @endif
+                        <li class="page-item"><a class="page-link" href="{{ $dailyIncomes->url($dailyIncomes->lastPage()) }}">{{ $dailyIncomes->lastPage() }}</a></li>
+                    @endif
+
                     @if ($dailyIncomes->hasMorePages())
-                        <li class="page-item"><a class="page-link" href="{{ $dailyIncomes->nextPageUrl() }}">&raquo;</a></li>
+                        <li class="page-item"><a class="page-link" href="{{ $dailyIncomes->nextPageUrl() }}">Next &raquo;</a></li>
                     @else
-                        <li class="page-item disabled"><a class="page-link" href="#">&raquo;</a></li>
+                        <li class="page-item disabled"><a class="page-link" href="#">Next &raquo;</a></li>
                     @endif
                 </ul>
             </div>
@@ -158,6 +182,12 @@
             </div>
         </div>
     </div>
+@endsection
+
+@section('styles')
+    <style>
+        /* Additional custom styles for Daily Income Management */
+    </style>
 @endsection
 
 @section('scripts')

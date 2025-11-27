@@ -1,0 +1,4 @@
+name,code,office_code,outlet_type_name,description,address,phone,email,pic_name,pic_phone,is_active
+"Outlet 1","OUT001","OFF001","Type A","Deskripsi outlet 1","Jl. Contoh No. 1","02112345678","outlet1@example.com","PIC 1","081234567890",1
+"Outlet 2","OUT002","OFF002","Type B","Deskripsi outlet 2","Jl. Contoh No. 2","02187654321","outlet2@example.com","PIC 2","089876543210",1
+"Outlet 3","OUT003","OFF001","Type A","Deskripsi outlet 3","Jl. Contoh No. 3","02111111111","outlet3@example.com","PIC 3","083333333333",0

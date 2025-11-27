@@ -112,8 +112,48 @@
                 <!-- /.card-body -->
                 <div class="card-footer">
                     <!-- Pagination -->
-                    <div class="d-flex justify-content-center">
-                        {{ $dailyIncomes->appends(request()->query())->links() }}
+                    <div class="mt-4 d-flex justify-content-between align-items-center">
+                        <div class="table-info-text">
+                            Showing {{ $dailyIncomes->firstItem() }} to {{ $dailyIncomes->lastItem() }} of {{ $dailyIncomes->total() }} results
+                        </div>
+                        <ul class="pagination pagination-sm m-0">
+                            @if ($dailyIncomes->onFirstPage())
+                                <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
+                            @else
+                                <li class="page-item"><a class="page-link" href="{{ $dailyIncomes->previousPageUrl() }}">&laquo;</a></li>
+                            @endif
+
+                            @php
+                                $start = max(1, $dailyIncomes->currentPage() - 2);
+                                $end = min($dailyIncomes->lastPage(), $dailyIncomes->currentPage() + 2);
+                            @endphp
+
+                            @if ($start > 1)
+                                <li class="page-item"><a class="page-link" href="{{ $dailyIncomes->url(1) }}">1</a></li>
+                                @if ($start > 2)
+                                    <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                                @endif
+                            @endif
+
+                            @for ($i = $start; $i <= $end; $i++)
+                                <li class="page-item {{ $i == $dailyIncomes->currentPage() ? 'active' : '' }}">
+                                    <a class="page-link" href="{{ $dailyIncomes->url($i) }}">{{ $i }}</a>
+                                </li>
+                            @endfor
+
+                            @if ($end < $dailyIncomes->lastPage())
+                                @if ($end < $dailyIncomes->lastPage() - 1)
+                                    <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                                @endif
+                                <li class="page-item"><a class="page-link" href="{{ $dailyIncomes->url($dailyIncomes->lastPage()) }}">{{ $dailyIncomes->lastPage() }}</a></li>
+                            @endif
+
+                            @if ($dailyIncomes->hasMorePages())
+                                <li class="page-item"><a class="page-link" href="{{ $dailyIncomes->nextPageUrl() }}">&raquo;</a></li>
+                            @else
+                                <li class="page-item disabled"><a class="page-link" href="#">&raquo;</a></li>
+                            @endif
+                        </ul>
                     </div>
                 </div>
                 <!-- /.card-footer -->

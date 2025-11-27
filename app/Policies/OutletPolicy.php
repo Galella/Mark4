@@ -13,10 +13,8 @@ class OutletPolicy
      */
     public function viewAny(User $user): bool
     {
-        // Super admin dan admin wilayah/area dapat melihat semua outlet
-        return $user->isSuperAdmin() ||
-               $user->isAdminWilayah() ||
-               $user->isAdminArea();
+        // All roles except admin outlet can view outlets
+        return !$user->isAdminOutlet();
     }
 
     /**
@@ -24,7 +22,18 @@ class OutletPolicy
      */
     public function view(User $user, Outlet $outlet): bool
     {
-        return $user->isSuperAdmin() || $user->hasOutletAccess($outlet);
+        // All roles except admin outlet can view outlets, but they must have access to that specific outlet
+        if ($user->isAdminOutlet()) {
+            return false;
+        }
+
+        // Super admin can view any outlet
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Other roles can view outlets they have access to
+        return $user->hasOutletAccess($outlet);
     }
 
     /**
@@ -32,9 +41,8 @@ class OutletPolicy
      */
     public function create(User $user): bool
     {
-        return $user->isSuperAdmin() ||
-               $user->isAdminWilayah() ||
-               $user->isAdminArea();
+        // All roles except admin outlet can create outlets
+        return !$user->isAdminOutlet();
     }
 
     /**
@@ -42,7 +50,18 @@ class OutletPolicy
      */
     public function update(User $user, Outlet $outlet): bool
     {
-        return $user->isSuperAdmin() || $user->hasOutletAccess($outlet);
+        // All roles except admin outlet can update outlets, but they must have access to that specific outlet
+        if ($user->isAdminOutlet()) {
+            return false;
+        }
+
+        // Super admin can update any outlet
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Other roles can update outlets they have access to
+        return $user->hasOutletAccess($outlet);
     }
 
     /**
@@ -50,9 +69,18 @@ class OutletPolicy
      */
     public function delete(User $user, Outlet $outlet): bool
     {
-        return $user->isSuperAdmin() ||
-               ($user->isAdminWilayah() && $user->hasOutletAccess($outlet)) ||
-               ($user->isAdminArea() && $user->hasOutletAccess($outlet));
+        // All roles except admin outlet can delete outlets, but they must have access to that specific outlet
+        if ($user->isAdminOutlet()) {
+            return false;
+        }
+
+        // Super admin can delete any outlet
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Other roles can delete outlets they have access to
+        return $user->hasOutletAccess($outlet);
     }
 
     /**

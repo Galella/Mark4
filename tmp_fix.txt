@@ -1,0 +1,9 @@
+<?php
+
+// Kita tidak bisa mengganti secara keseluruhan file, jadi mari kita perbaiki bagian yang rusak
+// Kita perlu mengganti bagian akhir tabel dan menghapus pagination
+// Bagian yang perlu diganti adalah:
+// - Bagian dari pagination (hapus semuanya)
+// - Ganti dengan akhir tabel yang benar
+
+?>

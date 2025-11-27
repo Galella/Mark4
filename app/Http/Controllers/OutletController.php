@@ -297,6 +297,65 @@ class OutletController extends Controller
     }
 
     /**
+     * Show the import form.
+     */
+    public function showImportForm()
+    {
+        $user = Auth::user();
+
+        // Only allow users who can create outlets (all roles except admin outlet)
+        $canCreate = $user->can('create', Outlet::class);
+
+        if (!$canCreate) {
+            abort(403, 'Unauthorized access to import feature');
+        }
+
+        return view('outlets.import');
+    }
+
+    /**
+     * Import outlets from Excel file.
+     */
+    public function import(Request $request)
+    {
+        $user = Auth::user();
+
+        // Only allow users who can create outlets (all roles except admin outlet)
+        $canCreate = $user->can('create', Outlet::class);
+
+        if (!$canCreate) {
+            abort(403, 'Unauthorized access to import feature');
+        }
+
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:10240', // max 10MB
+        ]);
+
+        try {
+            $file = $request->file('file');
+
+            // Import the file using our custom import class
+            $import = new \App\Imports\OutletImport();
+            \Maatwebsite\Excel\Facades\Excel::import($import, $file);
+
+            $successCount = $import->successCount ?? 0;
+            $errors = $import->errors ?? [];
+
+            if (!empty($errors)) {
+                return back()->withErrors(['errors' => $errors])
+                             ->withInput()
+                             ->with('error_count', count($errors))
+                             ->with('success_count', $successCount);
+            }
+
+            return redirect()->route('outlets.index')
+                             ->with('success', "Successfully imported {$successCount} outlet(s) from Excel file.");
+        } catch (\Exception $e) {
+            return back()->withErrors(['file' => 'Error importing file: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
      * Export outlets to Excel.
      */
     public function export()

@@ -18,31 +18,31 @@
                     <i class="fas fa-file-excel"></i> Export
                 </a>
                 @can('create', App\Models\Outlet::class)
-                    <a href="{{ route('outlets.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Create New Outlet
+                    <a href="{{ route('outlets.import.form') }}" class="btn btn-success mr-2">
+                        <i class="fas fa-file-import"></i> Import Excel
                     </a>
                 @endcan
             </div>
         </div>
         <!-- Outlet Type Statistics -->
-        @if(count($outletTypeStats) > 0)
-        <div class="card-body border-bottom">
-            <div class="row">
-                @foreach($outletTypeStats as $stat)
-                    <div class="col-md-3 col-sm-6 col-12">
-                        <div class="info-box">
-                            <span class="info-box-icon bg-info elevation-1">
-                                <i class="fas fa-store"></i>
-                            </span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">{{ $stat['type']->name }}</span>
-                                <span class="info-box-number">{{ $stat['count'] }} Outlet{!! $stat['count'] != 1 ? 's' : '' !!}</span>
+        @if (count($outletTypeStats) > 0)
+            <div class="card-body border-bottom">
+                <div class="row">
+                    @foreach ($outletTypeStats as $stat)
+                        <div class="col-md-3 col-sm-6 col-12">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-info elevation-1">
+                                    <i class="fas fa-store"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">{{ $stat['type']->name }}</span>
+                                    <span class="info-box-number">{{ $stat['count'] }} Outlet{!! $stat['count'] != 1 ? 's' : '' !!}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                @endforeach
+                    @endforeach
+                </div>
             </div>
-        </div>
         @endif
 
         <!-- Filter and Search Form -->
@@ -92,6 +92,12 @@
                         Clear
                     </a>
                 @endif
+                <div class="form-group ml-2 mb-2 mr-2">
+                    <a href="{{ route('outlets.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create New Outlet
+                    </a>
+
+                </div>
             </form>
         </div>
         <!-- /.card-header -->
@@ -133,10 +139,8 @@
 
                                     @can('delete', $outlet)
                                         <button type="button" class="btn btn-sm btn-danger delete-btn"
-                                            data-outlet-id="{{ $outlet->id }}"
-                                            data-outlet-name="{{ $outlet->name }}"
-                                            data-toggle="modal"
-                                            data-target="#deleteModal">
+                                            data-outlet-id="{{ $outlet->id }}" data-outlet-name="{{ $outlet->name }}"
+                                            data-toggle="modal" data-target="#deleteModal">
                                             Delete
                                         </button>
                                     @endcan
@@ -150,6 +154,7 @@
                     </tbody>
                 </table>
             </div>
+
             <!-- Pagination -->
             <div class="mt-4 d-flex justify-content-between align-items-center">
                 <div class="table-info-text">
@@ -159,15 +164,35 @@
                     @if ($outlets->onFirstPage())
                         <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
                     @else
-                        <li class="page-item"><a class="page-link" href="{{ $outlets->previousPageUrl() }}">&laquo;</a></li>
+                        <li class="page-item"><a class="page-link" href="{{ $outlets->previousPageUrl() }}">&laquo;</a>
+                        </li>
                     @endif
-                    
-                    @for ($i = 1; $i <= $outlets->lastPage(); $i++)
+
+                    @php
+                        $start = max(1, $outlets->currentPage() - 2);
+                        $end = min($outlets->lastPage(), $outlets->currentPage() + 2);
+                    @endphp
+
+                    @if ($start > 1)
+                        <li class="page-item"><a class="page-link" href="{{ $outlets->url(1) }}">1</a></li>
+                        @if ($start > 2)
+                            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                        @endif
+                    @endif
+
+                    @for ($i = $start; $i <= $end; $i++)
                         <li class="page-item {{ $i == $outlets->currentPage() ? 'active' : '' }}">
                             <a class="page-link" href="{{ $outlets->url($i) }}">{{ $i }}</a>
                         </li>
                     @endfor
-                    
+
+                    @if ($end < $outlets->lastPage())
+                        @if ($end < $outlets->lastPage() - 1)
+                            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                        @endif
+                        <li class="page-item"><a class="page-link" href="{{ $outlets->url($outlets->lastPage()) }}">{{ $outlets->lastPage() }}</a></li>
+                    @endif
+
                     @if ($outlets->hasMorePages())
                         <li class="page-item"><a class="page-link" href="{{ $outlets->nextPageUrl() }}">&raquo;</a></li>
                     @else
@@ -175,13 +200,13 @@
                     @endif
                 </ul>
             </div>
-
         </div>
         <!-- /.card-body -->
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -192,7 +217,8 @@
                 </div>
                 <div class="modal-body">
                     <p>Are you sure you want to delete <strong id="outletName"></strong>?</p>
-                    <p class="text-danger">This action cannot be undone and will permanently remove the outlet from the system.</p>
+                    <p class="text-danger">This action cannot be undone and will permanently remove the outlet from the
+                        system.</p>
                     <p>Please note:</p>
                     <ul>
                         <li>All related daily income records will be affected</li>
@@ -225,12 +251,12 @@
                 $('#outletName').text(outletName);
 
                 // Update the form action URL
-                const deleteUrl = '{{ route("outlets.destroy", ":id") }}'.replace(':id', outletId);
+                const deleteUrl = '{{ route('outlets.destroy', ':id') }}'.replace(':id', outletId);
                 $('#deleteForm').attr('action', deleteUrl);
             });
 
             // Reset form when modal is closed
-            $('#deleteModal').on('hidden.bs.modal', function () {
+            $('#deleteModal').on('hidden.bs.modal', function() {
                 $('#deleteForm').attr('action', '');
             });
         });

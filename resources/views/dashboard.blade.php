@@ -168,33 +168,10 @@
     </div>
 
     <div class="row">
-        <!-- Todo Section - Available for all roles -->
-        <div class="col-5">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">My Tasks</h3>
-                    <div class="card-tools">
-                        <button type="button" class="btn btn-primary btn-sm" data-toggle="modal"
-                            data-target="#todoModal">
-                            <i class="fas fa-plus"></i> Add Task
-                        </button>
-                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- Todo List -->
-                    <div id="todoList">
-                        <!-- Todos will be loaded here -->
-                        <p class="text-muted">Loading tasks...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+
         <!-- Income Charts Row for non-admin-outlet -->
         @if (!Auth::user()->isAdminOutlet())
-            <div class="col-7">
+            <div class="col-6">
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Income Trend (Last 7 Days)</h3>
@@ -211,10 +188,6 @@
                     </div>
                 </div>
             </div>
-
-    </div>
-
-    <div class="row">
         <div class="col-6">
             <div class="card">
                 <div class="card-header">
@@ -249,6 +222,31 @@
                 <div class="card-body">
                     <div class="chart-responsive">
                         <canvas id="incomeByModaPerMonthChart" height="200" style="height: 200px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Todo Section - Available for all roles -->
+        <div class="col-md-6 col-sm-6 col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">My Tasks</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-primary btn-sm" data-toggle="modal"
+                            data-target="#todoModal">
+                            <i class="fas fa-plus"></i> Add Task
+                        </button>
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Todo List -->
+                    <div id="todoList">
+                        <!-- Todos will be loaded here -->
+                        <p class="text-muted">Loading tasks...</p>
                     </div>
                 </div>
             </div>
@@ -381,7 +379,16 @@
                 if (isNaN(amountNum)) {
                     return 'Rp 0';
                 }
-                return 'Rp ' + amountNum.toLocaleString('id-ID');
+
+                if (amountNum >= 1000000000) {
+                    return 'Rp ' + (amountNum / 1000000000).toFixed(1) + ' M'; // Miliar
+                } else if (amountNum >= 1000000) {
+                    return 'Rp ' + (amountNum / 1000000).toFixed(0) + ' Jt'; // Juta
+                } else if (amountNum >= 1000) {
+                    return 'Rp ' + (amountNum / 1000).toFixed(0) + ' Rb'; // Ribu
+                } else {
+                    return 'Rp ' + amountNum.toLocaleString('id-ID');
+                }
             }
 
             // Function to format weight
@@ -412,8 +419,8 @@
                             labels: data.labels,
                             datasets: [{
                                 label: 'Income',
-                                backgroundColor: 'rgba(60, 141, 188, 0.9)',
-                                borderColor: 'rgba(60, 141, 188, 0.8)',
+                                backgroundColor: 'rgb(230, 117, 20)',
+                                borderColor: 'rgb(230, 117, 20)',
                                 pointRadius: false,
                                 pointColor: '#3b8bba',
                                 pointStrokeColor: 'rgba(60, 141, 188, 1)',
@@ -441,7 +448,18 @@
                                     ticks: {
                                         beginAtZero: true,
                                         callback: function(value) {
-                                            return 'Rp ' + value.toLocaleString('id-ID');
+                                            if (value >= 1000000000) {
+                                                return 'Rp ' + (value / 1000000000).toFixed(1) +
+                                                    ' M'; // Miliar
+                                            } else if (value >= 1000000) {
+                                                return 'Rp ' + (value / 1000000).toFixed(0) +
+                                                    ' Jt'; // Juta
+                                            } else if (value >= 1000) {
+                                                return 'Rp ' + (value / 1000).toFixed(0) +
+                                                    ' Rb'; // Ribu
+                                            } else {
+                                                return 'Rp ' + value.toLocaleString('id-ID');
+                                            }
                                         }
                                     }
                                 }
@@ -466,7 +484,7 @@
                             datasets: [{
                                 data: data.data,
                                 backgroundColor: [
-                                    '#007bff',
+                                    '#050E3C',
                                     '#28a745',
                                     '#dc3545',
                                     '#ffc107',
@@ -540,7 +558,18 @@
                                     ticks: {
                                         beginAtZero: true,
                                         callback: function(value) {
-                                            return 'Rp ' + value.toLocaleString('id-ID');
+                                            if (value >= 1000000000) {
+                                                return 'Rp ' + (value / 1000000000).toFixed(1) +
+                                                    ' M'; // Miliar
+                                            } else if (value >= 1000000) {
+                                                return 'Rp ' + (value / 1000000).toFixed(0) +
+                                                    ' Jt'; // Juta
+                                            } else if (value >= 1000) {
+                                                return 'Rp ' + (value / 1000).toFixed(0) +
+                                                    ' Rb'; // Ribu
+                                            } else {
+                                                return 'Rp ' + value.toLocaleString('id-ID');
+                                            }
                                         }
                                     }
                                 },
@@ -582,7 +611,19 @@
                                         beginAtZero: true,
                                         ticks: {
                                             callback: function(value) {
-                                                return 'Rp ' + value.toLocaleString('id-ID');
+                                                if (value >= 1000000000) {
+                                                    return 'Rp ' + (value / 1000000000).toFixed(
+                                                        1) + ' M'; // Miliar
+                                                } else if (value >= 1000000) {
+                                                    return 'Rp ' + (value / 1000000).toFixed(
+                                                        0) + ' Jt'; // Juta
+                                                } else if (value >= 1000) {
+                                                    return 'Rp ' + (value / 1000).toFixed(0) +
+                                                        ' Rb'; // Ribu
+                                                } else {
+                                                    return 'Rp ' + value.toLocaleString(
+                                                        'id-ID');
+                                                }
                                             }
                                         }
                                     }
@@ -633,14 +674,26 @@
                                 responsive: true,
                                 scales: {
                                     x: {
-                                        stacked: true,
+                                        stacked: false,
                                     },
                                     y: {
-                                        stacked: true,
+                                        stacked: false,
                                         ticks: {
                                             beginAtZero: true,
                                             callback: function(value) {
-                                                return 'Rp ' + value.toLocaleString('id-ID');
+                                                if (value >= 1000000000) {
+                                                    return 'Rp ' + (value / 1000000000).toFixed(
+                                                        1) + ' M'; // Miliar
+                                                } else if (value >= 1000000) {
+                                                    return 'Rp ' + (value / 1000000).toFixed(
+                                                        0) + ' Jt'; // Juta
+                                                } else if (value >= 1000) {
+                                                    return 'Rp ' + (value / 1000).toFixed(0) +
+                                                        ' Rb'; // Ribu
+                                                } else {
+                                                    return 'Rp ' + value.toLocaleString(
+                                                        'id-ID');
+                                                }
                                             }
                                         }
                                     }
@@ -776,7 +829,15 @@
                                 ticks: {
                                     beginAtZero: true,
                                     callback: function(value) {
-                                        return 'Rp ' + value.toLocaleString('id-ID');
+                                        if (value >= 1000000000) {
+                                            return 'Rp ' + (value / 1000000000).toFixed(1) + ' M'; // Miliar
+                                        } else if (value >= 1000000) {
+                                            return 'Rp ' + (value / 1000000).toFixed(0) + ' Jt'; // Juta
+                                        } else if (value >= 1000) {
+                                            return 'Rp ' + (value / 1000).toFixed(0) + ' Rb'; // Ribu
+                                        } else {
+                                            return 'Rp ' + value.toLocaleString('id-ID');
+                                        }
                                     }
                                 }
                             }

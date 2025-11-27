@@ -6,8 +6,11 @@ use App\Models\DailyIncome;
 use App\Services\ActivityLogService;
 use App\Http\Requests\CreateDailyIncomeRequest;
 use App\Http\Requests\UpdateDailyIncomeRequest;
+use App\Imports\DailyIncomeImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Validator;
 
 class DailyIncomeController extends Controller
 {
@@ -27,24 +30,24 @@ class DailyIncomeController extends Controller
 
         // Only admin outlet can access their own daily incomes
         if ($user->isAdminOutlet()) {
-            $query = DailyIncome::where('outlet_id', $user->outlet_id);
+            $query = DailyIncome::with(['outlet', 'moda', 'user'])->where('outlet_id', $user->outlet_id);
         } else {
             // Admin area can see incomes for their outlets
             if ($user->isAdminArea()) {
                 $outletIds = $user->office->outlets()->pluck('id');
-                $query = DailyIncome::whereIn('outlet_id', $outletIds);
-            } 
+                $query = DailyIncome::with(['outlet', 'moda', 'user'])->whereIn('outlet_id', $outletIds);
+            }
             // Admin wilayah can see incomes for their area
             elseif ($user->isAdminWilayah()) {
                 $outletIds = \App\Models\Outlet::whereHas('office', function($q) use ($user) {
                     $q->where('parent_id', $user->office_id)
                       ->orWhere('id', $user->office_id);
                 })->pluck('id');
-                $query = DailyIncome::whereIn('outlet_id', $outletIds);
-            } 
+                $query = DailyIncome::with(['outlet', 'moda', 'user'])->whereIn('outlet_id', $outletIds);
+            }
             // Super admin can see all
             else {
-                $query = DailyIncome::query();
+                $query = DailyIncome::with(['outlet', 'moda', 'user']);
             }
         }
 
@@ -281,5 +284,280 @@ class DailyIncomeController extends Controller
         $dailyIncome->delete();
 
         return redirect()->route('daily-incomes.index')->with('success', 'Daily income deleted successfully.');
+    }
+
+    /**
+     * Show the import form for daily incomes
+     */
+    public function showImportForm()
+    {
+        $user = Auth::user();
+
+        // Only super admin, admin wilayah, and admin outlet can import daily incomes
+        if (!$user->isSuperAdmin() && !$user->isAdminWilayah() && !$user->isAdminOutlet()) {
+            abort(403, 'Unauthorized access. Only super admin, admin wilayah, and admin outlet can import daily incomes.');
+        }
+
+        return view('import.daily-income');
+    }
+
+    /**
+     * Import daily incomes from Excel file
+     */
+    public function import(Request $request)
+    {
+        $user = Auth::user();
+
+        // Only super admin, admin wilayah, and admin outlet can import daily incomes
+        if (!$user->isSuperAdmin() && !$user->isAdminWilayah() && !$user->isAdminOutlet()) {
+            abort(403, 'Unauthorized access. Only super admin, admin wilayah, and admin outlet can import daily incomes.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|mimes:xlsx,xls,csv|max:10240', // max 10MB
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $userOutletId = null;
+            // If user is admin outlet, restrict import to their outlet only
+            if ($user->isAdminOutlet()) {
+                $userOutletId = $user->outlet_id;
+            }
+
+            // Use PhpSpreadsheet directly since Laravel Excel has issues reading the file
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($request->file('file')->getRealPath());
+            $worksheet = $spreadsheet->getActiveSheet();
+            $rows = $worksheet->toArray();
+
+            // Skip header row (first row)
+            $originalHeader = array_shift($rows);
+
+            // Normalize header keys to lowercase and map to expected field names
+            $headerMap = [
+                'date' => ['date', 'tanggal'],
+                'outlet code' => ['outlet code', 'outlet_code', 'outletcode'],
+                'moda name' => ['moda name', 'moda_name', 'modaname', 'moda'],
+                'colly' => ['colly'],
+                'weight' => ['weight', 'berat'],
+                'income' => ['income', 'pendapatan', 'total']
+            ];
+
+            $header = [];
+            foreach ($originalHeader as $col) {
+                $normalizedCol = trim(strtolower($col));
+
+                // Find the appropriate mapped header
+                $mappedHeader = $normalizedCol; // default
+                foreach ($headerMap as $expected => $possibleValues) {
+                    if (in_array($normalizedCol, $possibleValues)) {
+                        $mappedHeader = $expected;
+                        break;
+                    }
+                }
+
+                $header[] = $mappedHeader;
+            }
+
+            $successCount = 0;
+            $errors = [];
+
+            foreach ($rows as $index => $row) {
+                // Create associative array with header as keys
+                $rowData = array_combine($header, $row);
+
+                // Normalize values to ensure they are strings
+                $rowData = array_map(function($value) {
+                    return is_null($value) ? '' : trim($value);
+                }, $rowData);
+
+                // Pre-process date value to remove potential whitespace
+                if (isset($rowData['date'])) {
+                    $rowData['date'] = trim($rowData['date']);
+                }
+
+                // Validate the row data
+                $validationRules = [
+                    'date' => 'required|date',
+                    'moda name' => 'required|string|exists:modas,name',
+                    'colly' => 'required|numeric|min:0',  // Changed from integer to numeric to allow decimal values
+                    'weight' => 'required|numeric|min:0',
+                    'income' => 'required|numeric|min:0',
+                ];
+
+                // Only require outlet code if user has access to multiple outlets (not admin outlet)
+                if (!$userOutletId) {
+                    $validationRules['outlet code'] = 'required|string|exists:outlets,code';
+                }
+
+                $validator = Validator::make($rowData, $validationRules);
+
+                if ($validator->fails()) {
+                    foreach ($validator->errors()->all() as $error) {
+                        $errors[] = [
+                            'row' => $index + 2, // +2 karena baris pertama adalah header
+                            'error' => $error
+                        ];
+                    }
+                    continue;
+                }
+
+                $validated = $validator->validated();
+
+                // Convert date to Y-m-d format if needed
+                $dateValue = $validated['date'];
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateValue)) {
+                    // Try to parse the date using Carbon
+                    try {
+                        $dateValue = \Carbon\Carbon::parse($dateValue)->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $errors[] = [
+                            'row' => $index + 2,
+                            'error' => 'Invalid date format: ' . $validated['date']
+                        ];
+                        continue;
+                    }
+                }
+
+                // Determine outlet based on user type
+                if ($userOutletId) {
+                    // Admin outlet - use their outlet automatically
+                    $outlet = \App\Models\Outlet::find($userOutletId);
+                    if (!$outlet) {
+                        $errors[] = [
+                            'row' => $index + 2,
+                            'error' => 'Your outlet does not exist'
+                        ];
+                        continue;
+                    }
+                } else {
+                    // Super admin/admin wilayah - use outlet from Excel file
+                    $outlet = \App\Models\Outlet::where('code', $validated['outlet code'])->first();
+                    if (!$outlet) {
+                        $errors[] = [
+                            'row' => $index + 2,
+                            'error' => 'Outlet with code ' . $validated['outlet code'] . ' not found'
+                        ];
+                        continue;
+                    }
+                }
+
+                // Get moda by name
+                $moda = \App\Models\Moda::where('name', $validated['moda name'])->first();
+                if (!$moda) {
+                    $errors[] = [
+                        'row' => $index + 2,
+                        'error' => 'Moda with name ' . $validated['moda name'] . ' not found'
+                    ];
+                    continue;
+                }
+
+                // Check if daily income already exists for the same date, outlet, and moda
+                $existingIncome = \App\Models\DailyIncome::where('date', $dateValue)
+                                           ->where('outlet_id', $outlet->id)
+                                           ->where('moda_id', $moda->id)
+                                           ->first();
+
+                if ($existingIncome) {
+                    $errors[] = [
+                        'row' => $index + 2,
+                        'error' => 'Daily income already exists for date ' . $dateValue . ', outlet ' . $outlet->name . ', and moda ' . $moda->name
+                    ];
+                    continue;
+                }
+
+                // Create the daily income
+                \App\Models\DailyIncome::create([
+                    'date' => $dateValue,
+                    'outlet_id' => $outlet->id,
+                    'moda_id' => $moda->id,
+                    'colly' => $validated['colly'],
+                    'weight' => $validated['weight'],
+                    'income' => $validated['income'],
+                    'user_id' => $user->id, // Set the current user as the creator
+                ]);
+
+                $successCount++;
+            }
+
+            // Log import activity
+            $this->activityLogService->logActivity(
+                action: 'import',
+                module: 'daily_income',
+                description: 'Daily income records imported',
+                newValues: [
+                    'total_records_imported' => $successCount,
+                    'total_errors' => count($errors),
+                ]
+            );
+
+            $message = "Import completed successfully. {$successCount} records imported.";
+
+            if (!empty($errors)) {
+                $message .= " " . count($errors) . " records had errors.";
+                return redirect()->route('import.daily-income.form')
+                    ->with('import_errors', $errors)
+                    ->with('success', $message);
+            }
+
+            return redirect()->route('daily-incomes.index')
+                ->with('success', $message);
+        } catch (\Exception $e) {
+            \Log::error('Daily Income Import Error: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Import failed: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * Download import template for daily incomes
+     */
+    public function downloadImportTemplate()
+    {
+        $user = Auth::user();
+
+        // Only super admin, admin wilayah, and admin outlet can download the template
+        if (!$user->isSuperAdmin() && !$user->isAdminWilayah() && !$user->isAdminOutlet()) {
+            abort(403, 'Unauthorized access. Only super admin, admin wilayah, and admin outlet can download the template.');
+        }
+
+        $headers = [];
+        $sampleData = [];
+
+        if ($user->isAdminOutlet()) {
+            // For admin outlet: don't require outlet code, use their outlet automatically
+            $headers = ['Date', 'Moda Name', 'Colly', 'Weight', 'Income'];
+            $sampleData = [
+                ['Date' => '2025-01-15', 'Moda Name' => 'Darat', 'Colly' => 10, 'Weight' => 100.5, 'Income' => 5000000],
+                ['Date' => '2025-01-16', 'Moda Name' => 'Laut', 'Colly' => 5, 'Weight' => 200.0, 'Income' => 3000000],
+            ];
+        } else {
+            // For super admin and admin wilayah: require outlet code
+            $headers = ['Date', 'Outlet Code', 'Moda Name', 'Colly', 'Weight', 'Income'];
+            $sampleData = [
+                ['Date' => '2025-01-15', 'Outlet Code' => 'OUT001', 'Moda Name' => 'Darat', 'Colly' => 10, 'Weight' => 100.5, 'Income' => 5000000],
+                ['Date' => '2025-01-15', 'Outlet Code' => 'OUT002', 'Moda Name' => 'Laut', 'Colly' => 5, 'Weight' => 200.0, 'Income' => 3000000],
+            ];
+        }
+
+        return response()->streamDownload(function () use ($headers, $sampleData) {
+            $handle = fopen('php://output', 'w');
+
+            // Write header
+            fputcsv($handle, $headers);
+
+            // Write sample data
+            foreach ($sampleData as $row) {
+                fputcsv($handle, $row);
+            }
+
+            fclose($handle);
+        }, 'daily_income_import_template.csv');
     }
 }

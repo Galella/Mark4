@@ -65,7 +65,44 @@
         
         <div class="card-footer clearfix">
             <div class="float-right">
-                {{ $activityLogs->links() }}
+                <ul class="pagination pagination-sm m-0">
+                    @if ($activityLogs->onFirstPage())
+                        <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
+                    @else
+                        <li class="page-item"><a class="page-link" href="{{ $activityLogs->previousPageUrl() }}">&laquo;</a></li>
+                    @endif
+
+                    @php
+                        $start = max(1, $activityLogs->currentPage() - 2);
+                        $end = min($activityLogs->lastPage(), $activityLogs->currentPage() + 2);
+                    @endphp
+
+                    @if ($start > 1)
+                        <li class="page-item"><a class="page-link" href="{{ $activityLogs->url(1) }}">1</a></li>
+                        @if ($start > 2)
+                            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                        @endif
+                    @endif
+
+                    @for ($i = $start; $i <= $end; $i++)
+                        <li class="page-item {{ $i == $activityLogs->currentPage() ? 'active' : '' }}">
+                            <a class="page-link" href="{{ $activityLogs->url($i) }}">{{ $i }}</a>
+                        </li>
+                    @endfor
+
+                    @if ($end < $activityLogs->lastPage())
+                        @if ($end < $activityLogs->lastPage() - 1)
+                            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                        @endif
+                        <li class="page-item"><a class="page-link" href="{{ $activityLogs->url($activityLogs->lastPage()) }}">{{ $activityLogs->lastPage() }}</a></li>
+                    @endif
+
+                    @if ($activityLogs->hasMorePages())
+                        <li class="page-item"><a class="page-link" href="{{ $activityLogs->nextPageUrl() }}">&raquo;</a></li>
+                    @else
+                        <li class="page-item disabled"><a class="page-link" href="#">&raquo;</a></li>
+                    @endif
+                </ul>
             </div>
         </div>
     </div>

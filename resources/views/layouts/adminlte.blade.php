@@ -18,6 +18,10 @@
     <!-- Theme style -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
 
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap4.min.css">
+
     @yield('styles')
 </head>
 
@@ -127,7 +131,7 @@
                             </li>
                         @endcan
 
-                        @if (Auth::user()->isSuperAdmin() || Auth::user()->isAdminWilayah() || Auth::user()->isAdminArea())
+                        @if (Auth::check() && (Auth::user()->isSuperAdmin() || Auth::user()->isAdminWilayah() || Auth::user()->isAdminArea()))
                             <li class="nav-item mb-1">
                                 <a href="{{ route('modas.index') }}"
                                     class="nav-link {{ request()->routeIs('modas.*') ? 'active' : '' }}">
@@ -137,7 +141,17 @@
                             </li>
                         @endif
 
-                        @if (Auth::user()->isAdminOutlet())
+                        @if (Auth::check() && (Auth::user()->isSuperAdmin() || Auth::user()->isAdminWilayah() || Auth::user()->isAdminOutlet()))
+                            <li class="nav-item mb-1">
+                                <a href="{{ route('import.daily-income.form') }}"
+                                    class="nav-link {{ request()->routeIs('import.daily-income.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-file-import"></i>
+                                    <p>Import Daily Income</p>
+                                </a>
+                            </li>
+                        @endif
+
+                        @if (Auth::check() && Auth::user()->isAdminOutlet())
                             <li class="nav-item mb-1">
                                 <a href="{{ route('daily-incomes.index') }}"
                                     class="nav-link {{ request()->routeIs('daily-incomes.*') ? 'active' : '' }}">
@@ -158,7 +172,7 @@
                             </a>
                         </li>
 
-                        @if (Auth::user()->isSuperAdmin() || Auth::user()->isAdminWilayah() || Auth::user()->isAdminArea())
+                        @if (Auth::check() && (Auth::user()->isSuperAdmin() || Auth::user()->isAdminWilayah() || Auth::user()->isAdminArea()))
                             <li class="nav-item mb-1">
                                 <a href="{{ route('reports.target-realization.index') }}"
                                     class="nav-link {{ request()->routeIs('reports.target-realization.*') ? 'active' : '' }}">
@@ -219,7 +233,7 @@
             <div class="float-right d-none d-sm-inline-block">
                 <div class="info">
                     <a href="{{ route('dashboard') }}" class="d-block"
-                        style="font-weight: 600; font-size: 0.9em;">{{ Auth::user()->name ?? 'Guest' }}
+                        style="font-weight: 600; font-size: 0.9em;">{{ Auth::check() ? Auth::user()->name : 'Guest' }}
                     </a>
                 </div>
             </div>
@@ -264,6 +278,12 @@
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- DataTables & Responsive -->
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap4.min.js"></script>
 
     @yield('scripts')
 
