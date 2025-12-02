@@ -56,10 +56,10 @@
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6 d-flex">
-                                <button type="submit" class="btn btn-primary me-2">Filter</button>
-                                <a href="{{ route('reports.daily-income.summary') }}" class="btn btn-secondary">Reset</a>
-                                <a href="{{ route('reports.daily-income.export-summary', request()->query()) }}" class="btn btn-success">Export to Excel</a>
-                                <a href="{{ route('reports.daily-income.index') }}" class="btn btn-info">Detailed View</a>
+                                <button type="submit" class="btn btn-primary ml-1"><i class="fas fa-filter"></i></button>
+                                <a href="{{ route('reports.daily-income.summary') }}" class="btn btn-secondary ml-1"><i class="fas fa-sync-alt"></i></a>
+                                <a href="{{ route('reports.daily-income.export-summary', request()->query()) }}" class="btn btn-success ml-1"><i class="fas fa-file-excel"></i></a>
+                                <a href="{{ route('reports.daily-income.index') }}" class="btn btn-info ml-1">Detailed View</a>
                             </div>
                         </div>
                     </form>

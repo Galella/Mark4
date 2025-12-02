@@ -107,15 +107,15 @@
                             </div>
                         </div>
                         <div class="row mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-6 d-flex">
                                 <label for="search" class="form-label">Search</label>
                                 <input type="text" name="search" id="search" class="form-control" placeholder="Search by moda, outlet, or date..." value="{{ request('search') }}">
                             </div>
-                            <div class="col-md-6 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary me-2">Filter</button>
-                                <a href="{{ route('reports.daily-income.index') }}" class="btn btn-secondary me-2">Reset</a>
-                                <a href="{{ route('reports.daily-income.export', request()->query()) }}" class="btn btn-success">Export to Excel</a>
-                                <a href="{{ route('reports.daily-income.summary') }}" class="btn btn-info">Summary View</a>
+                            <div class="col-md-6">
+                                <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter"></i></button>
+                                <a href="{{ route('reports.daily-income.index') }}" class="btn btn-secondary ml-1"><i class="fas fa-sync-alt"></i></a>
+                                <a href="{{ route('reports.daily-income.export', request()->query()) }}" class="btn btn-success ml-1"><i class="fas fa-file-excel"></i></a>
+                                <a href="{{ route('reports.daily-income.summary') }}" class="btn btn-info ml-1">Summary View</a>
                             </div>
                         </div>
                     </form>
