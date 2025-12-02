@@ -233,69 +233,80 @@ class DashboardController extends Controller
      */
     private function getIncomeStats($user)
     {
-        $query = DailyIncome::query();
+        // Build base query with user-based access control
+        $baseQuery = function() use ($user) {
+            $query = DailyIncome::query();
 
-        // Apply user-based access control
-        if ($user->isAdminOutlet()) {
-            $query->where('outlet_id', $user->outlet_id);
-        } else {
-            // Admin area can see incomes for their outlets
-            if ($user->isAdminArea()) {
-                $outletIds = $user->office->outlets()->pluck('id');
-                $query->whereIn('outlet_id', $outletIds);
+            if ($user->isAdminOutlet()) {
+                $query->where('outlet_id', $user->outlet_id);
+            } else {
+                if ($user->isAdminArea()) {
+                    $outletIds = $user->office->outlets()->pluck('id');
+                    $query->whereIn('outlet_id', $outletIds);
+                } elseif ($user->isAdminWilayah()) {
+                    $outletIds = Outlet::whereHas('office', function ($q) use ($user) {
+                        $q->where('parent_id', $user->office_id)
+                            ->orWhere('id', $user->office_id);
+                    })->pluck('id');
+                    $query->whereIn('outlet_id', $outletIds);
+                }
+                // Super admin can see all
             }
-            // Admin wilayah can see incomes for their area
-            elseif ($user->isAdminWilayah()) {
-                $outletIds = Outlet::whereHas('office', function ($q) use ($user) {
-                    $q->where('parent_id', $user->office_id)
-                        ->orWhere('id', $user->office_id);
-                })->pluck('id');
-                $query->whereIn('outlet_id', $outletIds);
-            }
-            // Super admin can see all
-            else {
-                // No additional filter needed for super admin
-            }
-        }
+
+            return $query;
+        };
 
         // Calculate today's income
-        $todayIncome = clone $query;
-        $todayIncome = $todayIncome->whereDate('date', today())->sum('income');
+        $todayQuery = $baseQuery();
+        $todayIncome = $todayQuery->whereDate('date', today())->sum('income');
 
         // Calculate this week's income
-        $weekIncome = clone $query;
-        $weekIncome = $weekIncome->whereBetween('date', [today()->startOfWeek(), today()->endOfWeek()])->sum('income');
+        $weekQuery = $baseQuery();
+        $weekIncome = $weekQuery->whereBetween('date', [today()->startOfWeek(), today()->endOfWeek()])->sum('income');
 
         // Calculate this month's income
-        $monthIncome = clone $query;
-        $monthIncome = $monthIncome->whereMonth('date', today()->month)->whereYear('date', today()->year)->sum('income');
+        $monthQuery = $baseQuery();
+        $monthIncome = $monthQuery->whereMonth('date', today()->month)->whereYear('date', today()->year)->sum('income');
 
         // Calculate total income
-        $totalIncome = clone $query;
-        $totalIncome = $totalIncome->sum('income');
+        $totalQuery = $baseQuery();
+        $totalIncome = $totalQuery->sum('income');
 
         // Get income trend for last 7 days
         $incomeTrend = [];
         $incomeLabels = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = today()->subDays($i);
-            $incomeQuery = clone $query;
-            $dayIncome = $incomeQuery->whereDate('date', $date)->sum('income');
+            $dailyQuery = $baseQuery();
+            $dayIncome = $dailyQuery->whereDate('date', $date)->sum('income');
 
-            $incomeTrend[] = $dayIncome;
+            $incomeTrend[] = (float)$dayIncome; // Ensure it's a float value
             $incomeLabels[] = $date->format('D');
         }
 
-        // Get income by moda
-        $incomeByModa = [];
-        $modaLabels = [];
+        // Debug log untuk admin outlet
+        if ($user->isAdminOutlet()) {
+            \Log::info('Admin Outlet Income Trend Debug', [
+                'user_id' => $user->id,
+                'outlet_id' => $user->outlet_id,
+                'outlet_name' => $user->outlet ? $user->outlet->name : 'No outlet assigned',
+                'dates_checked' => array_map(function($i) { return today()->subDays($i)->format('Y-m-d'); }, range(6, 0)),
+                'income_trend_values' => $incomeTrend,
+                'income_trend_labels' => $incomeLabels,
+                'query_sql' => $baseQuery()->toSql(),
+                'query_bindings' => $baseQuery()->getBindings()
+            ]);
+        }
 
-        $modaQuery = clone $query;
+        // Get income by moda
+        $modaQuery = $baseQuery();
         $modaData = $modaQuery->selectRaw('moda_id, SUM(income) as total_income')
             ->groupBy('moda_id')
             ->with(['moda'])
             ->get();
 
+        $incomeByModa = [];
+        $modaLabels = [];
         foreach ($modaData as $modaIncome) {
             if ($modaIncome->moda) {
                 $incomeByModa[] = $modaIncome->total_income;
@@ -304,15 +315,14 @@ class DashboardController extends Controller
         }
 
         // Get income by outlet (for other charts)
-        $incomeByOutlet = [];
-        $outletLabels = [];
-
-        $outletQuery = clone $query;
+        $outletQuery = $baseQuery();
         $outletData = $outletQuery->selectRaw('outlet_id, SUM(income) as total_income')
             ->groupBy('outlet_id')
             ->with(['outlet'])
             ->get();
 
+        $incomeByOutlet = [];
+        $outletLabels = [];
         foreach ($outletData as $outletIncome) {
             if ($outletIncome->outlet) {
                 $incomeByOutlet[] = $outletIncome->total_income;
@@ -321,71 +331,146 @@ class DashboardController extends Controller
         }
 
         // Get total income by month (simple bar chart showing total income per month)
-        $monthlyIncomeData = $query
+        $monthlyBaseQuery = $baseQuery();
+        $monthlyIncomeData = $monthlyBaseQuery
             ->selectRaw("
                 YEAR(date) as year,
                 MONTH(date) as month,
                 SUM(income) as total_income
             ")
-            ->where('date', '>=', now()->subMonths(12)->startOfMonth()) // Last 6 months
+            ->where('date', '>=', now()->subMonths(11)) // Last 12 months
             ->groupBy('year', 'month')
             ->orderBy('year', 'asc')
             ->orderBy('month', 'asc')
             ->get();
 
-        // Organize the data for the simple bar chart (total income per month)
+        // For all users (admin outlet, admin area, admin wilayah, super admin), include target indicators to maintain consistency
+        // First get target data for all user types
+        $targetBaseQuery = function() use ($user) {
+            $targetQuery = IncomeTarget::query();
+
+            if ($user->isAdminOutlet()) {
+                $targetQuery->where('outlet_id', $user->outlet_id);
+            } else {
+                if ($user->isAdminArea()) {
+                    $outletIds = $user->office->outlets()->pluck('id');
+                    $targetQuery->whereIn('outlet_id', $outletIds);
+                } elseif ($user->isAdminWilayah()) {
+                    $outletIds = Outlet::whereHas('office', function ($q) use ($user) {
+                        $q->where('parent_id', $user->office_id)
+                            ->orWhere('id', $user->office_id);
+                    })->pluck('id');
+                    $targetQuery->whereIn('outlet_id', $outletIds);
+                }
+                // Super admin can see all targets
+            }
+
+            return $targetQuery;
+        };
+
+        // Get target by month for the last 12 months
+        $targetQuery = $targetBaseQuery();
+        $monthlyTargetData = $targetQuery
+            ->selectRaw("
+                target_year as year,
+                target_month as month,
+                SUM(target_amount) as total_target
+            ")
+            ->where(function ($query) {
+                $query->where('target_year', '>=', now()->year - 1) // Last 2 years
+                      ->orWhere(function ($q) {
+                          $q->where('target_year', now()->year)
+                            ->where('target_month', '>=', now()->month - 11);
+                      });
+            })
+            ->groupBy('target_year', 'target_month')
+            ->orderBy('target_year', 'asc')
+            ->orderBy('target_month', 'asc')
+            ->get();
+
+        // Organize the data for the chart with both income and target
         $incomeByOutletPerMonth = [
             'labels' => [],
             'datasets' => [
                 [
-                    'label' => 'Total Income',
+                    'label' => 'Monthly Income',
                     'data' => [],
-                    'backgroundColor' => 'rgb(230, 117, 20)',
+                    'backgroundColor' => 'rgba(230, 117, 20, 0.2)',
                     'borderColor' => 'rgb(230, 117, 20)',
-                    'borderWidth' => 1
+                    'borderWidth' => 2,
+                    'borderDash' => [], // Solid line for actual income
+                    'fill' => false,
+                    'yAxisID' => 'y',
+                    'showLine' => true // Show line for income
+                ],
+                [
+                    'label' => 'Monthly Target',
+                    'data' => [],
+                    'backgroundColor' => 'rgb(0, 123, 255)',
+                    'borderColor' => 'rgb(0, 123, 255)',
+                    'borderWidth' => 2,
+                    'pointStyle' => 'star', // Use star shape for target markers
+                    'pointRadius' => 6,
+                    'pointHoverRadius' => 8,
+                    'showLine' => false, // Don't show line, only points for target
+                    'yAxisID' => 'y'
                 ]
             ]
         ];
 
-        // Populate the labels and data arrays
+        // Prepare income and target data arrays
+        $incomeData = [];
+        $targetData = [];
+
         foreach ($monthlyIncomeData as $item) {
             $monthYear = $item->year . '-' . str_pad($item->month, 2, '0', STR_PAD_LEFT);
-            $date = \DateTime::createFromFormat('Y-m', $monthYear);
-            $incomeByOutletPerMonth['labels'][] = $date ? $date->format('M Y') : '';
-            $incomeByOutletPerMonth['datasets'][0]['data'][] = $item->total_income;
+            $incomeData[$monthYear] = $item->total_income;
+        }
+
+        foreach ($monthlyTargetData as $item) {
+            $monthYear = $item->year . '-' . str_pad($item->month, 2, '0', STR_PAD_LEFT);
+            $targetData[$monthYear] = $item->total_target;
+        }
+
+        // Fill in missing months with 0
+        for ($i = 11; $i >= 0; $i--) {
+            $month = now()->subMonths($i);
+            $monthYear = $month->format('Y-m');
+            $monthLabel = $month->format('M Y');
+
+            $incomeByOutletPerMonth['labels'][] = $monthLabel;
+
+            $incomeValue = isset($incomeData[$monthYear]) ? $incomeData[$monthYear] : 0;
+            $targetValue = isset($targetData[$monthYear]) ? $targetData[$monthYear] : 0;
+
+            $incomeByOutletPerMonth['datasets'][0]['data'][] = $incomeValue;
+            $incomeByOutletPerMonth['datasets'][1]['data'][] = $targetValue;
         }
 
         // Calculate today's colly and weight based on user access level
-        $todayColly = 0;
-        $todayWeight = 0;
+        $todayStatsBaseQuery = function() use ($user) {
+            $todayStatsQuery = DailyIncome::query();
 
-        // Create a fresh query for today's stats
-        $todayStatsQuery = DailyIncome::query();
+            if ($user->isAdminOutlet()) {
+                $todayStatsQuery->where('outlet_id', $user->outlet_id);
+            } else {
+                if ($user->isAdminArea()) {
+                    $outletIds = $user->office->outlets()->pluck('id');
+                    $todayStatsQuery->whereIn('outlet_id', $outletIds);
+                } elseif ($user->isAdminWilayah()) {
+                    $outletIds = Outlet::whereHas('office', function ($q) use ($user) {
+                        $q->where('parent_id', $user->office_id)
+                            ->orWhere('id', $user->office_id);
+                    })->pluck('id');
+                    $todayStatsQuery->whereIn('outlet_id', $outletIds);
+                }
+                // Super admin can see all
+            }
 
-        // Apply the same access control as the main query
-        if ($user->isAdminOutlet()) {
-            $todayStatsQuery->where('outlet_id', $user->outlet_id);
-        } else {
-            // Admin area can see incomes for their outlets
-            if ($user->isAdminArea()) {
-                $outletIds = $user->office->outlets()->pluck('id');
-                $todayStatsQuery->whereIn('outlet_id', $outletIds);
-            }
-            // Admin wilayah can see incomes for their area
-            elseif ($user->isAdminWilayah()) {
-                $outletIds = Outlet::whereHas('office', function ($q) use ($user) {
-                    $q->where('parent_id', $user->office_id)
-                        ->orWhere('id', $user->office_id);
-                })->pluck('id');
-                $todayStatsQuery->whereIn('outlet_id', $outletIds);
-            }
-            // Super admin can see all
-            else {
-                // No additional filter needed for super admin
-            }
-        }
+            return $todayStatsQuery;
+        };
 
-        // Add date filter for today
+        $todayStatsQuery = $todayStatsBaseQuery();
         $todayStatsQuery->whereDate('date', today());
 
         $todayColly = $todayStatsQuery->sum('colly');
@@ -504,8 +589,8 @@ class DashboardController extends Controller
         // Get income by moda for the last 6 months grouped by month
         $modaIncomeData = $query
             ->selectRaw("
-                moda_id, 
-                YEAR(date) as year, 
+                moda_id,
+                YEAR(date) as year,
                 MONTH(date) as month,
                 SUM(income) as total_income
             ")
@@ -561,6 +646,262 @@ class DashboardController extends Controller
                 ];
             }
         }
+
+        return response()->json($chartData);
+    }
+
+    /**
+     * Get percentage of income by moda per month data for dashboard table
+     */
+    public function getIncomeByModaPerMonthPercentageAjax()
+    {
+        try {
+            $user = auth()->user();
+
+            $dailyIncomeQuery = DailyIncome::query();
+
+            // Apply user-based access control
+            if ($user->isAdminOutlet()) {
+                // For admin outlet, only get their outlet's data
+                $dailyIncomeQuery->where('outlet_id', $user->outlet_id);
+            } else {
+                // Admin area can see incomes for their outlets
+                if ($user->isAdminArea()) {
+                    $outletIds = $user->office->outlets()->pluck('id');
+                    $dailyIncomeQuery->whereIn('outlet_id', $outletIds);
+                }
+                // Admin wilayah can see incomes for their area
+                elseif ($user->isAdminWilayah()) {
+                    $outletIds = \App\Models\Outlet::whereHas('office', function ($q) use ($user) {
+                        $q->where('parent_id', $user->office_id)
+                            ->orWhere('id', $user->office_id);
+                    })->pluck('id');
+                    $dailyIncomeQuery->whereIn('outlet_id', $outletIds);
+                }
+                // Super admin can see all
+                else {
+                    // No additional filter needed for super admin
+                }
+            }
+
+            // Get income by moda for the last 12 months grouped by month and moda
+            $modaIncomeData = $dailyIncomeQuery
+                ->selectRaw("
+                    daily_incomes.moda_id,
+                    YEAR(daily_incomes.date) as year,
+                    MONTH(daily_incomes.date) as month,
+                    SUM(daily_incomes.income) as total_income
+                ")
+                ->join('modas', 'daily_incomes.moda_id', '=', 'modas.id') // Join with modas table
+                ->where('daily_incomes.date', '>=', now()->subMonths(11)->startOfMonth()) // Last 12 months
+                ->groupBy('daily_incomes.moda_id', 'year', 'month')
+                ->get();
+
+            // Calculate total income per month for percentage calculation
+            $monthlyTotals = [];
+            foreach ($modaIncomeData as $item) {
+                $monthKey = $item->year . '-' . str_pad($item->month, 2, '0', STR_PAD_LEFT);
+                if (!isset($monthlyTotals[$monthKey])) {
+                    $monthlyTotals[$monthKey] = 0;
+                }
+                $monthlyTotals[$monthKey] += $item->total_income;
+            }
+
+            // Get all distinct moda with their names - this will be filtered below based on available data
+            $allModas = \App\Models\Moda::all()->keyBy('id');
+            $allMonths = [];
+
+            // Get unique months for income data
+            foreach ($modaIncomeData as $item) {
+                if ($item->moda_id) { // Only add if moda_id exists
+                    $monthKey = $item->year . '-' . str_pad($item->month, 2, '0', STR_PAD_LEFT);
+                    if (!in_array($monthKey, $allMonths)) {
+                        $allMonths[] = $monthKey;
+                    }
+                }
+            }
+
+            // Sort months chronologically
+            sort($allMonths);
+
+            // Prepare table data
+            $tableData = [
+                'modas' => [],
+                'months' => array_map(function ($month) {
+                    $date = \DateTime::createFromFormat('Y-m', $month);
+                    return $date ? $date->format('M Y') : '';
+                }, $allMonths),
+                'data' => []
+            ];
+
+            // Get only modas that have income data for the user's accessible outlets
+            $modasWithData = $modaIncomeData->pluck('moda_id')->unique()->values();
+            $relevantModas = $allModas->filter(function ($moda, $key) use ($modasWithData) {
+                return $modasWithData->contains($moda->id);
+            });
+
+            // Add each relevant moda to the table
+            foreach ($relevantModas as $moda) {
+                $modaRow = [
+                    'name' => $moda->name,
+                    'data' => []
+                ];
+
+                foreach ($allMonths as $month) {
+                    // Get income for this moda and month
+                    $monthIncome = $modaIncomeData->first(function ($item) use ($moda, $month) {
+                        if (!$item->moda_id) return false;
+                        $itemMonth = $item->year . '-' . str_pad($item->month, 2, '0', STR_PAD_LEFT);
+                        return $item->moda_id == $moda->id && $itemMonth == $month;
+                    });
+
+                    $actualIncome = $monthIncome ? $monthIncome->total_income : 0;
+                    $totalMonthIncome = isset($monthlyTotals[$month]) ? $monthlyTotals[$month] : 0;
+
+                    // Calculate percentage of total income for the month - if no total income for the month, set to 0
+                    $percentage = $totalMonthIncome > 0 ? ($actualIncome / $totalMonthIncome) * 100 : 0;
+
+                    $modaRow['data'][] = [
+                        'actual' => $actualIncome,
+                        'total_month_income' => $totalMonthIncome,
+                        'percentage' => round($percentage),
+                        'formatted_percentage' => round($percentage) . '%'
+                    ];
+                }
+
+                $tableData['modas'][] = $moda->name;
+                $tableData['data'][] = $modaRow;
+            }
+
+            return response()->json($tableData);
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            \Log::error('Error in getIncomeByModaPerMonthPercentageAjax: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+
+            // Return empty data in case of error
+            return response()->json([
+                'modas' => [],
+                'months' => [],
+                'data' => []
+            ]);
+        }
+    }
+
+    /**
+     * Get income per month for admin outlet with target indicators
+     */
+    public function getIncomePerMonthForOutletAjax()
+    {
+        $user = auth()->user();
+
+        // Only for admin outlet users
+        if (!$user->isAdminOutlet()) {
+            return response()->json([
+                'labels' => [],
+                'datasets' => []
+            ]);
+        }
+
+        $dailyIncomeQuery = DailyIncome::where('outlet_id', $user->outlet_id);
+        $incomeTargetQuery = IncomeTarget::where('outlet_id', $user->outlet_id);
+
+        // Get income by month for the last 12 months
+        $monthlyIncomeData = $dailyIncomeQuery
+            ->selectRaw("
+                YEAR(date) as year,
+                MONTH(date) as month,
+                SUM(income) as total_income
+            ")
+            ->where('date', '>=', now()->subMonths(11)->startOfMonth()) // Last 12 months
+            ->groupBy('year', 'month')
+            ->orderBy('year', 'asc')
+            ->orderBy('month', 'asc')
+            ->get();
+
+        // Get target by month for the last 12 months
+        $monthlyTargetData = $incomeTargetQuery
+            ->selectRaw("
+                target_year as year,
+                target_month as month,
+                SUM(target_amount) as total_target
+            ")
+            ->where(function ($query) {
+                $query->where('target_year', '>=', now()->year - 1) // Last 2 years
+                      ->orWhere(function ($q) {
+                          $q->where('target_year', now()->year)
+                            ->where('target_month', '>=', now()->month - 11);
+                      });
+            })
+            ->groupBy('target_year', 'target_month')
+            ->orderBy('target_year', 'asc')
+            ->orderBy('target_month', 'asc')
+            ->get();
+
+        // Prepare labels and data
+        $labels = [];
+        $incomeData = [];
+        $targetData = [];
+
+        foreach ($monthlyIncomeData as $item) {
+            $monthYear = $item->year . '-' . str_pad($item->month, 2, '0', STR_PAD_LEFT);
+            $date = \DateTime::createFromFormat('Y-m', $monthYear);
+            $labels[] = $date ? $date->format('M Y') : '';
+            $incomeData[$monthYear] = $item->total_income;
+        }
+
+        foreach ($monthlyTargetData as $item) {
+            $monthYear = $item->year . '-' . str_pad($item->month, 2, '0', STR_PAD_LEFT);
+            $targetData[$monthYear] = $item->total_target;
+        }
+
+        // Fill in missing months with 0
+        $allMonths = [];
+        $allIncomeData = [];
+        $allTargetData = [];
+
+        for ($i = 11; $i >= 0; $i--) {
+            $month = now()->subMonths($i);
+            $monthYear = $month->format('Y-m');
+            $monthLabel = $month->format('M Y');
+
+            $allMonths[] = $monthLabel;
+
+            $incomeValue = isset($incomeData[$monthYear]) ? $incomeData[$monthYear] : 0;
+            $targetValue = isset($targetData[$monthYear]) ? $targetData[$monthYear] : 0;
+
+            $allIncomeData[] = $incomeValue;
+            $allTargetData[] = $targetValue;
+        }
+
+        $chartData = [
+            'labels' => $allMonths,
+            'datasets' => [
+                [
+                    'label' => 'Monthly Income',
+                    'data' => $allIncomeData,
+                    'backgroundColor' => 'rgba(230, 117, 20, 0.2)',
+                    'borderColor' => 'rgb(230, 117, 20)',
+                    'borderWidth' => 2,
+                    'borderDash' => [], // Solid line for actual income
+                    'fill' => false,
+                    'yAxisID' => 'y',
+                    'showLine' => true // Show line for income
+                ],
+                [
+                    'label' => 'Monthly Target',
+                    'data' => $allTargetData,
+                    'backgroundColor' => 'rgb(0, 123, 255)',
+                    'borderColor' => 'rgb(0, 123, 255)',
+                    'borderWidth' => 2,
+                    'pointStyle' => 'star', // Use star shape for target markers
+                    'pointRadius' => 6,
+                    'pointHoverRadius' => 8,
+                    'showLine' => false, // Don't show line, only points for target
+                    'yAxisID' => 'y'
+                ]
+            ]
+        ];
 
         return response()->json($chartData);
     }

@@ -11,7 +11,7 @@
 @section('content')
     @if (!Auth::user()->isAdminOutlet())
         <div class="row">
-            <div class="col-md-3 col-sm-6 col-12">
+            <div class="col-3">
                 <!-- info box -->
                 <div class="info-box">
                     <span class="info-box-icon bg-success"><i class="fas fa-store"></i></span>
@@ -29,7 +29,7 @@
                 </div>
             </div>
             <!-- ./col -->
-            <div class="col-md-3 col-sm-6 col-12">
+            <div class="col-3">
                 <!-- info box -->
                 <div class="info-box">
                     <span class="info-box-icon bg-warning"><i class="fas fa-users"></i></span>
@@ -47,7 +47,7 @@
                 </div>
             </div>
             <!-- ./col -->
-            <div class="col-md-3 col-sm-6 col-12">
+            <div class="col-3">
                 <!-- info box -->
                 <div class="info-box">
                     <span class="info-box-icon bg-primary"><i class="fas fa-calendar-day"></i></span>
@@ -62,7 +62,7 @@
                 </div>
             </div>
             <!-- ./col -->
-            <div class="col-md-3 col-sm-6 col-12">
+            <div class="col-3">
                 <!-- info box -->
                 <div class="info-box">
                     <span class="info-box-icon bg-danger"><i class="fas fa-bullseye"></i></span>
@@ -96,7 +96,7 @@
         </div>
     @else
         <div class="row">
-            <div class="col-md-3 col-sm-6 col-12">
+            <div class="col-3">
                 <!-- info box for daily colly -->
                 <div class="info-box">
                     <span class="info-box-icon bg-primary"><i class="fas fa-boxes"></i></span>
@@ -110,7 +110,7 @@
                 </div>
             </div>
             <!-- ./col -->
-            <div class="col-md-3 col-sm-6 col-12">
+            <div class="col-3">
                 <!-- info box for daily weight -->
                 <div class="info-box">
                     <span class="info-box-icon bg-success"><i class="fas fa-weight"></i></span>
@@ -123,7 +123,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6 col-12">
+            <div class="col-3">
                 <!-- info box for daily income -->
                 <div class="info-box">
                     <span class="info-box-icon bg-warning"><i class="fas fa-money-bill-wave"></i></span>
@@ -137,7 +137,7 @@
                 </div>
             </div>
             <!-- ./col -->
-            <div class="col-md-3 col-sm-6 col-12">
+            <div class="col-3">
                 <!-- info box for current month progress -->
                 <div class="info-box">
                     <span class="info-box-icon bg-danger"><i class="fas fa-bullseye"></i></span>
@@ -168,13 +168,31 @@
     </div>
 
     <div class="row">
+        <!-- Income Trend (Last 7 Days) - col-6 for all users -->
+        <div class="col-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Income Trend (Last 7 Days)</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-responsive">
+                        <canvas id="incomeTrendChart" height="200" style="height: 200px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        <!-- Income Charts Row for non-admin-outlet -->
-        @if (!Auth::user()->isAdminOutlet())
-            <div class="col-6">
+        <!-- Income per Month - col-6 for all users -->
+        <div class="col-6">
+            @if (!Auth::user()->isAdminOutlet())
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Income Trend (Last 7 Days)</h3>
+                        <h3 class="card-title">Income per Month</h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                                 <i class="fas fa-minus"></i>
@@ -183,15 +201,35 @@
                     </div>
                     <div class="card-body">
                         <div class="chart-responsive">
-                            <canvas id="incomeTrendChart" height="200" style="height: 200px;"></canvas>
+                            <canvas id="incomeByOutletPerMonthChart" height="200" style="height: 200px;"></canvas>
                         </div>
                     </div>
                 </div>
-            </div>
-        <div class="col-6">
+            @else
+                <!-- For admin outlet users, show their specific chart with targets -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Income per Month</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-responsive">
+                            <canvas id="incomePerMonthForOutletChart" height="200" style="height: 200px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        <!-- Income Completion by Moda per Month - col-12 for all users -->
+        <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Income per Month</h3>
+                    <h3 class="card-title">Income Completion by Moda per Month</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="collapse">
                             <i class="fas fa-minus"></i>
@@ -199,36 +237,28 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="chart-responsive">
-                        <canvas id="incomeByOutletPerMonthChart" height="200" style="height: 200px;"></canvas>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm" id="modaPercentageTable">
+                            <thead>
+                                <tr id="modaTableHeader">
+                                    <th>Moda</th>
+                                    <!-- Month headers will be added dynamically via JavaScript -->
+                                </tr>
+                            </thead>
+                            <tbody id="modaPercentageTableBody">
+                                <!-- Data will be loaded here via AJAX -->
+                                <tr>
+                                    <td colspan="7" class="text-center">Loading data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
-        @endif
 
-        <!-- Show stacked bar chart for all users -->
-
+        <!-- My Tasks - col-6 for all roles -->
         <div class="col-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Income by Moda per Month</h3>
-                    <div class="card-tools">
-                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="chart-responsive">
-                        <canvas id="incomeByModaPerMonthChart" height="200" style="height: 200px;"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Todo Section - Available for all roles -->
-        <div class="col-md-6 col-sm-6 col-12">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">My Tasks</h3>
@@ -305,6 +335,20 @@
 
         .text-decoration-line-through {
             text-decoration: line-through !important;
+        }
+
+        #modaPercentageTable {
+            font-size: 0.9em;
+        }
+
+        #modaPercentageTable th {
+            text-align: center;
+            background-color: #f8f9fa;
+        }
+
+        #modaPercentageTable td {
+            text-align: center;
+            vertical-align: middle;
         }
     </style>
 @endsection
@@ -403,7 +447,8 @@
             }
 
             // Initialize charts for income data (for all users)
-            let incomeTrendChart, incomeByModaChart, incomeByOutletChart, incomeByModaPerMonthChart;
+            let incomeTrendChart, incomeByModaChart, incomeByOutletChart, incomeByModaPerMonthChart,
+                incomePerMonthForOutletChart;
 
             function updateIncomeTrendChart(data) {
                 if (typeof incomeTrendChart !== 'undefined' && incomeTrendChart) {
@@ -656,30 +701,32 @@
                 });
             }
 
-            // Function to update income by moda per month chart
-            function updateIncomeByModaPerMonthChart() {
-                $.get('{{ route('dashboard.income-by-moda-per-month') }}', function(data) {
-                    if (typeof incomeByModaPerMonthChart !== 'undefined' && incomeByModaPerMonthChart) {
-                        incomeByModaPerMonthChart.destroy();
+            // Function to update income per month chart for admin outlet
+            function updateIncomePerMonthForOutletChart() {
+                $.get('{{ route('dashboard.income-per-month-for-outlet') }}', function(data) {
+                    if (typeof incomePerMonthForOutletChart !== 'undefined' &&
+                        incomePerMonthForOutletChart) {
+                        incomePerMonthForOutletChart.destroy();
                     }
 
-                    const ctxModaPerMonth = document.getElementById('incomeByModaPerMonthChart');
-                    if (ctxModaPerMonth) {
-                        const ctxModaPerMonthCtx = ctxModaPerMonth.getContext('2d');
-                        incomeByModaPerMonthChart = new Chart(ctxModaPerMonthCtx, {
-                            type: 'bar',
+                    const ctxOutletMonth = document.getElementById('incomePerMonthForOutletChart');
+                    if (ctxOutletMonth) {
+                        const ctxOutletMonthCtx = ctxOutletMonth.getContext('2d');
+                        incomePerMonthForOutletChart = new Chart(ctxOutletMonthCtx, {
+                            type: 'line',
                             data: data,
                             options: {
                                 maintainAspectRatio: false,
                                 responsive: true,
                                 scales: {
                                     x: {
-                                        stacked: false,
+                                        grid: {
+                                            display: false,
+                                        }
                                     },
                                     y: {
-                                        stacked: false,
+                                        beginAtZero: true,
                                         ticks: {
-                                            beginAtZero: true,
                                             callback: function(value) {
                                                 if (value >= 1000000000) {
                                                     return 'Rp ' + (value / 1000000000).toFixed(
@@ -692,14 +739,18 @@
                                                         ' Rb'; // Ribu
                                                 } else {
                                                     return 'Rp ' + value.toLocaleString(
-                                                        'id-ID');
+                                                    'id-ID');
                                                 }
                                             }
+                                        },
+                                        grid: {
+                                            display: false,
                                         }
                                     }
                                 },
                                 plugins: {
                                     legend: {
+                                        display: true,
                                         position: 'top',
                                     },
                                     tooltip: {
@@ -722,7 +773,119 @@
                         });
                     }
                 }).fail(function(xhr, status, error) {
-                    console.error('Error fetching income by moda per month data:', error);
+                    console.error('Error fetching income per month for outlet data:', error);
+                });
+            }
+
+            // Function to update income by moda per month percentage table
+            function updateIncomeByModaPerMonthPercentageTable() {
+                $.get('{{ route('dashboard.income-by-moda-per-month-percentage') }}', function(data) {
+                    console.log('Income by moda per month percentage data:', data);
+
+                    const tableBody = document.getElementById('modaPercentageTableBody');
+                    const tableHeader = document.getElementById('modaTableHeader');
+                    if (!tableBody || !tableHeader) return;
+
+                    // Clear existing header cells except the first one (Moda)
+                    // Keep only the first th (Moda)
+                    while (tableHeader.children.length > 1) {
+                        tableHeader.removeChild(tableHeader.lastChild);
+                    }
+
+                    // Add month headers based on the data
+                    if (data.months && data.months.length > 0) {
+                        data.months.forEach(function(month) {
+                            const headerCell = document.createElement('th');
+                            headerCell.textContent = month;
+                            headerCell.style.textAlign = 'center';
+                            tableHeader.appendChild(headerCell);
+                        });
+                    } else {
+                        // If no months data, add a placeholder header
+                        const headerCell = document.createElement('th');
+                        headerCell.textContent = 'No Data';
+                        headerCell.style.textAlign = 'center';
+                        tableHeader.appendChild(headerCell);
+                    }
+
+                    // Clear existing table body
+                    tableBody.innerHTML = '';
+
+                    // Add data rows
+                    if (data.data && data.data.length > 0) {
+                        data.data.forEach(function(modaRow) {
+                            const row = document.createElement('tr');
+
+                            // Add moda name as first column
+                            const modaNameCell = document.createElement('td');
+                            modaNameCell.textContent = modaRow.name;
+                            modaNameCell.style.fontWeight = 'bold';
+                            row.appendChild(modaNameCell);
+
+                            // Add percentage data for each month
+                            modaRow.data.forEach(function(monthData) {
+                                const cell = document.createElement('td');
+                                cell.style.textAlign = 'center';
+
+                                // Create badge element for percentage
+                                const badge = document.createElement('span');
+                                badge.textContent = monthData.formatted_percentage;
+
+                                // Add badge styling and color coding based on percentage
+                                badge.className = 'badge';
+                                if (monthData.percentage === 0) {
+                                    badge.className += ' badge-danger';
+                                } else if (monthData.percentage >= 70 && monthData
+                                    .percentage <= 100) {
+                                    badge.className += ' badge-success';
+                                } else if (monthData.percentage >= 40 && monthData
+                                    .percentage < 70) {
+                                    badge.className += ' badge-info';
+                                } else if (monthData.percentage < 40) {
+                                    badge.className += ' badge-warning';
+                                }
+
+                                // Add some padding to the badge
+                                badge.style.padding = '5px 10px';
+                                badge.style.fontSize = '0.85em';
+                                badge.style.borderRadius = '0.25rem';
+
+                                cell.appendChild(badge);
+                                row.appendChild(cell);
+                            });
+
+                            tableBody.appendChild(row);
+                        });
+                    } else {
+                        // No data available
+                        const row = document.createElement('tr');
+                        const cell = document.createElement('td');
+                        cell.setAttribute('colspan', data.months ? data.months.length + 1 : 2);
+                        cell.className = 'text-center';
+                        cell.textContent = 'No data available';
+                        row.appendChild(cell);
+                        tableBody.appendChild(row);
+                    }
+                }).fail(function(xhr, status, error) {
+                    console.error('Error fetching income by moda per month percentage data:', error);
+
+                    // Show error in the table
+                    const tableBody = document.getElementById('modaPercentageTableBody');
+                    const tableHeader = document.getElementById('modaTableHeader');
+                    if (tableHeader) {
+                        // Reset header to default
+                        tableHeader.innerHTML = '<th>Moda</th><th>Error</th>';
+                    }
+                    if (tableBody) {
+                        tableBody.innerHTML = '';
+                        const row = document.createElement('tr');
+                        const cell = document.createElement('td');
+                        cell.setAttribute('colspan', '2');
+                        cell.className = 'text-center text-danger';
+                        cell.textContent = 'Error loading data. Please try again.';
+                        row.appendChild(cell);
+                        tableBody.appendChild(row);
+                    }
                 });
             }
 
@@ -759,9 +922,6 @@
                         $('#total-income-stat').text(formatCurrency(data.total_income !== null && data
                             .total_income !== undefined ? data.total_income : 0));
 
-                        // Update income trend chart
-                        updateIncomeTrendChart(data.income_trend);
-
                         // Update income by moda chart
                         updateIncomeByModaChart(data.income_by_moda);
 
@@ -772,8 +932,11 @@
                         updateIncomeByOutletPerMonthChart();
                     }
 
-                    // Update income by moda per month chart for all users
-                    updateIncomeByModaPerMonthChart();
+                    // Update income trend chart for all users (both admin outlet and others)
+                    updateIncomeTrendChart(data.income_trend);
+
+                    // Update income by moda per month percentage table for all users
+                    updateIncomeByModaPerMonthPercentageTable();
                 }).fail(function(xhr, status, error) {
                     console.error('Error fetching dashboard data:', error);
                     console.log('Response:', xhr.responseText);
@@ -782,13 +945,22 @@
 
             // Update all charts and data on page load
             updateIncomeStats();
-            updateIncomeByModaPerMonthChart(); // Initialize the moda stacked bar chart
             updateIncomeByOutletPerMonthChart(); // Initialize the outlet stacked bar chart
+
+            // Initialize income per month chart for admin outlet users
+            @if (Auth::user()->isAdminOutlet())
+                updateIncomePerMonthForOutletChart(); // Initialize the income per month chart for outlet
+            @endif
 
             // Update data every 5 minutes
             setInterval(updateIncomeStats, 300000);
-            setInterval(updateIncomeByModaPerMonthChart, 300000);
+            setInterval(updateIncomeByModaPerMonthPercentageTable, 300000);
             setInterval(updateIncomeByOutletPerMonthChart, 300000);
+
+            @if (Auth::user()->isAdminOutlet())
+                setInterval(updateIncomePerMonthForOutletChart,
+                300000); // Update income per month chart for outlet every 5 minutes
+            @endif
 
             // Initialize Target Achievement Chart
             @if (isset($targetProgressData))

@@ -174,10 +174,17 @@
 
                         @if (Auth::check() && (Auth::user()->isSuperAdmin() || Auth::user()->isAdminWilayah() || Auth::user()->isAdminArea()))
                             <li class="nav-item mb-1">
-                                <a href="{{ route('reports.target-realization.index') }}"
-                                    class="nav-link {{ request()->routeIs('reports.target-realization.*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-chart-line"></i>
-                                    <p>Target vs Realisasi</p>
+                                <a href="{{ route('reports.target-realization.index') }}?view=detailed"
+                                    class="nav-link {{ request()->routeIs('reports.target-realization.*') && request()->get('view') !== 'dashboard' ? 'active' : (request()->routeIs('reports.target-realization.*') && !request()->has('view') ? 'active' : '') }}">
+                                    <i class="nav-icon fas fa-table"></i>
+                                    <p>Target vs Realisasi Detail</p>
+                                </a>
+                            </li>
+                            <li class="nav-item mb-1">
+                                <a href="{{ route('reports.target-realization.index') }}?view=dashboard"
+                                    class="nav-link {{ request()->routeIs('reports.target-realization.*') && request()->get('view') === 'dashboard' ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-tachometer-alt"></i>
+                                    <p>Performance Dashboard</p>
                                 </a>
                             </li>
                         @endif

@@ -11,13 +11,67 @@
 
 @section('content')
 <div class="container-fluid">
+    <!-- Info boxes for report summary -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 col-sm-6 col-12">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-info"><i class="fas fa-coins"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Total Income</span>
+                                    <span class="info-box-number">
+                                        Rp {{ number_format($totalIncome ?? 0, 0, ',', '.') }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 col-12">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-success"><i class="fas fa-boxes"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Total Colly</span>
+                                    <span class="info-box-number">
+                                        {{ number_format($totalColly ?? 0, 0, ',', '.') }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 col-12">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-warning"><i class="fas fa-weight-hanging"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Total Weight</span>
+                                    <span class="info-box-number">
+                                        {{ number_format($totalWeight ?? 0, 0, ',', '.') }} Kg
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 col-12">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-primary"><i class="fas fa-receipt"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Total Records</span>
+                                    <span class="info-box-number">{{ number_format($totalRecords ?? 0, 0, ',', '.') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Daily Income Report</h3>
                 </div>
-                <!-- Filter Form -->
+                <!-- Report Table -->
                 <div class="card-body">
                     <form method="GET" action="{{ route('reports.daily-income.index') }}">
                         <div class="row mb-3">
@@ -86,7 +140,7 @@
                                     <td>{{ \Carbon\Carbon::parse($income->date)->format('d M Y') }}</td>
                                     <td>{{ $income->outlet->name }}</td>
                                     <td>{{ $income->moda->name }}</td>
-                                    <td>{{ $income->colly }}</td>
+                                    <td>{{ number_format($income->colly, 0, ',', '.') }}</td>
                                     <td>{{ number_format($income->weight, 0, ',', '.') }}</td>
                                     <td>Rp {{ number_format($income->income, 0, ',', '.') }}</td>
                                     <td>{{ $income->user->name }}</td>

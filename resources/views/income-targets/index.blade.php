@@ -32,7 +32,7 @@
                         <option value="">All Outlets</option>
                         @foreach($outlets as $outlet)
                             <option value="{{ $outlet->id }}" {{ request('outlet_id') == $outlet->id ? 'selected' : '' }}>
-                                {{ $outlet->name }} ({{ $outlet->office->name ?? '' }})
+                                {{ $outlet->name }} ({{ $outlet->office?->name ?? 'No Office' }})
                             </option>
                         @endforeach
                     </select>

@@ -364,4 +364,64 @@ class OutletController extends Controller
 
         return Excel::download(new OutletExport, 'outlets_' . date('Y-m-d_H-i-s') . '.xlsx');
     }
+
+    /**
+     * Download import template for outlets
+     */
+    public function downloadImportTemplate()
+    {
+        $user = Auth::user();
+
+        // Only allow users who can create outlets (all roles except admin outlet)
+        $canCreate = $user->can('create', Outlet::class);
+
+        if (!$canCreate) {
+            abort(403, 'Unauthorized access. Only users with create permissions can download the template.');
+        }
+
+        $headers = [
+            'ID',
+            'Name',
+            'Code',
+            'Office Code',      // This matches what the import expects
+            'Outlet Type Name', // This matches what the import expects
+            'Description',
+            'Address',
+            'Phone',
+            'Email',
+            'PIC Name',
+            'PIC Phone',
+            'is_active',
+        ];
+
+        $templateData = [
+            $headers,
+            [
+                '', // ID will be auto-generated
+                'Jakarta Pusat',
+                'JKT001',
+                'GWB-1', // Office code that exists in system (type must be 'area')
+                'Reguler', // Outlet type name that exists in system
+                'Outlet di Jakarta Pusat',
+                'Jl. Sudirman No. 1, Jakarta',
+                '02112345678',
+                'outlet@example.com',
+                'Budi Santoso',
+                '081234567890',
+                '1', // 1 for active, 0 for inactive (matches column name 'is_active')
+            ]
+        ];
+
+        $fileName = 'outlet_import_template.csv';
+        $filePath = storage_path('app/' . $fileName);
+
+        // Create CSV content
+        $file = fopen($filePath, 'w');
+        foreach ($templateData as $row) {
+            fputcsv($file, $row);
+        }
+        fclose($file);
+
+        return response()->download($filePath)->deleteFileAfterSend(true);
+    }
 }

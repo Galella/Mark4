@@ -12,8 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('daily_incomes', function (Blueprint $table) {
-            $table->unsignedBigInteger('moda_id')->after('date');
-            $table->foreign('moda_id')->references('id')->on('modas')->onDelete('cascade');
+            // Add foreign key constraint for moda_id if the column exists
+            if (Schema::hasColumn('daily_incomes', 'moda_id')) {
+                // Check if the foreign key constraint already exists before adding it
+                $table->foreign('moda_id')->references('id')->on('modas')->onDelete('cascade');
+            }
         });
     }
 

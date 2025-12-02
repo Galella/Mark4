@@ -10,6 +10,7 @@ This is a comprehensive income tracking and management system built with Laravel
 - **Multi-level Access Control**: Four-tier role system (Super Admin, Admin Wilayah, Admin Area, Admin Outlet)
 - **Organizational Hierarchy**: Structured management from regional (Wilayah) to individual outlet levels
 - **Real-time Dashboard**: Live charts and performance metrics
+- **Outlet Performance Control**: Comprehensive outlet performance monitoring with dashboard and detailed reports
 - **Activity Logging**: Comprehensive audit trail for all system activities
 
 ### Technology Stack
@@ -44,13 +45,21 @@ This is a comprehensive income tracking and management system built with Laravel
 - Performance progress tracking
 - Cross-level reporting capabilities
 
-#### 5. Security & Compliance
+#### 5. Outlet Performance Control System
+- **Performance Dashboard**: Visual overview with KPIs and charts
+- **Detailed Performance Report**: Sortable table with comprehensive metrics
+- **Performance Scoring**: Weighted scoring algorithm considering achievement rate (60%), colly (25%), and weight (15%)
+- **Status Classification**: Automatic categorization (Excellent, Good, Average, Below Average, Poor)
+- **Filtering & Sorting**: Year, month, and outlet filtering with column sorting
+- **Interactive Charts**: Top-performing outlets, income vs target comparison, achievement rate distribution
+
+#### 6. Security & Compliance
 - Comprehensive authorization policies
 - Activity logging for all operations
 - Multi-tier validation system
 - Secure authentication mechanism
 
-#### 6. Import & Export Functionality
+#### 7. Import & Export Functionality
 - **Bulk Import**: Efficient Excel import for daily income data
 - **Smart Import**: Automatic mapping of different header formats
 - **Performance Optimization**: Summary tables for faster reporting
@@ -58,7 +67,7 @@ This is a comprehensive income tracking and management system built with Laravel
 - **Scheduled Summaries**: Automated daily summary generation at 1:00 AM
 - **Data Integrity**: Duplication checks and constraint enforcement
 
-#### 7. Scalability Features
+#### 8. Scalability Features
 - **Summary Tables**: Optimized for large datasets with millions of records
 - **Efficient Queries**: Indexed columns and optimized relationships
 - **Background Processing**: Scheduled tasks for heavy operations
@@ -96,6 +105,8 @@ Recent enhancements focus on solving scalability challenges with large data volu
 - **Operational Efficiency**: Streamlined income tracking across multiple locations
 - **Management Visibility**: Hierarchical oversight capabilities
 - **Performance Analytics**: Real-time performance monitoring
+- **Outlet Performance Control**: Dedicated dashboard and reporting for outlet performance management
+- **Easy Navigation**: Outlet performance menus integrated into reports section for authorized users
 - **Compliance**: Complete audit trails for financial operations
 - **Scalability**: Designed for multi-region, multi-outlet organizations with growth potential
 - **Future Ready**: Architecture prepared for handling massive data volumes

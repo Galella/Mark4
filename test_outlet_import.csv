@@ -1,0 +1,2 @@
+ID,Name,Code,Office Code,Outlet Type Name,Description,Address,Phone,Email,PIC Name,PIC Phone,Status (1 for active, 0 for inactive)
+,Test Outlet,TST001,KP-001,Reguler,Test outlet description,Jl. Test No. 1,02112345678,test@example.com,Test Person,081234567890,1

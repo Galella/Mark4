@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('daily_incomes', function (Blueprint $table) {
+        Schema::create('daily_income_archives', function (Blueprint $table) {
             $table->id();
             $table->date('date');
-            $table->unsignedBigInteger('moda_id')->nullable(); // Make nullable since modas table will be created later
+            $table->unsignedBigInteger('moda_id')->nullable(); // Make nullable for archival
             $table->integer('colly');
             $table->decimal('weight', 10, 2);
             $table->decimal('income', 15, 2);
@@ -22,10 +22,12 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');
             $table->timestamps();
 
-            // Foreign key constraints - outlets and users exist, but modas will be added later
-            $table->foreign('outlet_id')->references('id')->on('outlets')->onDelete('cascade');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            // moda_id foreign key will be added in a later migration after modas table is created
+            // Indexes for performance
+            $table->index(['date'], 'idx_daily_archives_date');
+            $table->index(['outlet_id'], 'idx_daily_archives_outlet_id');
+            $table->index(['moda_id'], 'idx_daily_archives_moda_id');
+            $table->index(['date', 'outlet_id'], 'idx_daily_archives_date_outlet');
+            $table->index(['date', 'moda_id'], 'idx_daily_archives_date_moda');
         });
     }
 
@@ -34,6 +36,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('daily_incomes');
+        Schema::dropIfExists('daily_income_archives');
     }
 };

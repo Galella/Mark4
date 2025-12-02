@@ -20,7 +20,7 @@
             <div class="alert alert-info">
                 <h5><i class="icon fas fa-info"></i> Instructions:</h5>
                 <ul>
-                    <li>Download the <a href="{{ asset('templates/outlets-template.csv') }}" target="_blank">template file (.csv format - can be opened and saved as .xlsx in Microsoft Excel)</a> to see the required format</li>
+                    <li>Download the <a href="{{ route('outlets.import.template') }}" target="_blank">template file (.csv format - can be opened and saved as .xlsx in Microsoft Excel)</a> to see the required format</li>
                     <li>Ensure your Excel file contains the following columns: <strong>name</strong>, <strong>code</strong>, <strong>office_code</strong>, <strong>outlet_type_name</strong>, and optional <strong>description</strong>, <strong>address</strong>, <strong>phone</strong>, <strong>email</strong>, <strong>pic_name</strong>, <strong>pic_phone</strong>, <strong>is_active</strong></li>
                     <li>Office codes must match existing office codes in the system</li>
                     <li>Outlet type names must match existing outlet type names in the system</li>

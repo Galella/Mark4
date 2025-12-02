@@ -74,3 +74,4 @@ Artisan::command('daily-income:generate-summaries {--date=} {--force}', function
 
 // Schedule
 Schedule::command('daily-income:generate-summaries')->daily()->at('01:00'); // Run daily at 1 AM
+Schedule::command('daily-incomes:archive')->monthlyOn(1, '02:00'); // Run monthly archiving at 2 AM on 1st day

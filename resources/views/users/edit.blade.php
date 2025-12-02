@@ -4,6 +4,47 @@
 
 @section('content-header', 'Edit User')
 
+@section('styles')
+    <!-- Select2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+    <!-- Custom Select2 styles to match AdminLTE theme -->
+    <style>
+        .select2-container--default .select2-selection--single {
+            border: 1px solid #d2d6de;
+            border-radius: 0;
+            padding: 0.375rem 0.75rem;
+            height: calc(2.25rem + 2px);
+            background-color: #fff;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: #444;
+            line-height: calc(2.25rem - 6px);
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: calc(2.25rem - 6px);
+        }
+
+        .select2-container--default.select2-container--focus .select2-selection--multiple,
+        .select2-container--default.select2-container--focus .select2-selection--single {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        .select2-dropdown {
+            border: 1px solid #d2d6de;
+            border-radius: 0;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #007bff;
+        }
+    </style>
+@endsection
+
+
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
     <li class="breadcrumb-item"><a href="{{ route('users.index') }}">Users</a></li>
@@ -103,7 +144,7 @@
                         
                         <div class="form-group" id="outlet-field" style="{{ old('role', $user->role) === 'admin_outlet' ? 'display: block;' : 'display: none;' }}">
                             <label for="outlet_id">Outlet</label>
-                            <select class="form-control @error('outlet_id') is-invalid @enderror" id="outlet_id" name="outlet_id">
+                            <select class="form-control select2 @error('outlet_id') is-invalid @enderror" id="outlet_id" name="outlet_id" style="width: 100%;">
                                 <option value="">Select Outlet</option>
                                 @foreach($outlets as $outlet)
                                     <option value="{{ $outlet->id }}" {{ old('outlet_id', $user->outlet_id) == $outlet->id ? 'selected' : '' }}>
@@ -151,6 +192,28 @@
             
             // Trigger change saat halaman dimuat untuk menangani nilai old
             $('#role').trigger('change');
+        });
+    </script>
+
+    <!-- Include Select2 script and initialize it -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Initialize Select2 after a delay to ensure the library is loaded
+            setTimeout(function() {
+                if (typeof $.fn.select2 !== 'undefined') {
+                    $('.select2').select2({
+                        theme: 'bootstrap4',
+                        placeholder: 'Select an outlet',
+                        allowClear: true,
+                        width: 'resolve' // Biarkan Select2 menentukan lebar otomatis sesuai dengan container
+                    });
+
+                    console.log('Select2 initialized successfully');
+                } else {
+                    console.error('Select2 library is not available');
+                }
+            }, 300);
         });
     </script>
 @endsection

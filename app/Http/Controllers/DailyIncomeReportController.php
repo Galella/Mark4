@@ -82,13 +82,21 @@ class DailyIncomeReportController extends Controller
             });
         }
 
+        // Get paginated results for the table
         $dailyIncomes = $query->orderBy('date', 'desc')->paginate(20)->appends($request->query());
+
+        // Get total counts for all records matching the filters (not paginated)
+        $totalQuery = clone $query; // Clone the original query to maintain all filters
+        $totalRecords = $totalQuery->count();
+        $totalIncome = $totalQuery->sum('income');
+        $totalColly = $totalQuery->sum('colly');
+        $totalWeight = $totalQuery->sum('weight');
 
         // Get available outlets and modas for the filters
         $outlets = $this->getAvailableOutlets($user);
         $modas = Moda::all();
 
-        return view('reports.daily-income.index', compact('dailyIncomes', 'outlets', 'modas'));
+        return view('reports.daily-income.index', compact('dailyIncomes', 'outlets', 'modas', 'totalIncome', 'totalColly', 'totalWeight', 'totalRecords'));
     }
 
     /**

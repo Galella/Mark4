@@ -5,8 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class DailyIncome extends Model
+class DailyIncomeArchive extends Model
 {
+    protected $table = 'daily_income_archives';
+
     protected $fillable = [
         'date',
         'moda_id',
@@ -46,23 +48,5 @@ class DailyIncome extends Model
     public function moda(): BelongsTo
     {
         return $this->belongsTo(Moda::class);
-    }
-
-    /**
-     * Scope to get only recent records (not archived)
-     * By default, only get records from last 3 months to improve performance
-     */
-    public function scopeRecent($query, $months = 3)
-    {
-        return $query->where('date', '>=', now()->subMonths($months)->startOfMonth());
-    }
-
-    /**
-     * Scope to include archived records as well
-     */
-    public function scopeWithArchived($query)
-    {
-        // This would join with the archive table - but requires additional logic
-        return $query;
     }
 }

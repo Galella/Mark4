@@ -7,6 +7,7 @@ use App\Models\Outlet;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Services\ActivityLogService;
 use App\Http\Requests\CreateIncomeTargetRequest;
@@ -180,7 +181,7 @@ class IncomeTargetController extends Controller
                     'description' => ['nullable', 'string', 'max:500'],
                 ];
 
-                $validator = \Validator::make($entry, $entryValidation);
+                $validator = Validator::make($entry, $entryValidation);
                 if ($validator->fails()) {
                     return back()->withErrors($validator->errors())->withInput();
                 }

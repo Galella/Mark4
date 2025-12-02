@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('daily_incomes', function (Blueprint $table) {
-            $table->dropColumn('moda');
+            if (Schema::hasColumn('daily_incomes', 'moda')) {
+                $table->dropColumn('moda');
+            }
         });
     }
 

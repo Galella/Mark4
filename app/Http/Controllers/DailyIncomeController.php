@@ -324,6 +324,10 @@ class DailyIncomeController extends Controller
         }
 
         try {
+            // Initialize import progress service
+            $importProgressService = app(\App\Services\ImportProgressService::class);
+            $jobId = $importProgressService->generateJobId();
+
             $userOutletId = null;
             // If user is admin outlet, restrict import to their outlet only
             if ($user->isAdminOutlet()) {
@@ -364,10 +368,31 @@ class DailyIncomeController extends Controller
                 $header[] = $mappedHeader;
             }
 
+            $totalRows = count($rows);
+
+            // Initialize progress
+            $importProgressService->setProgress($jobId, [
+                'total_rows' => $totalRows,
+                'processed_rows' => 0,
+                'successful_imports' => 0,
+                'failed_imports' => 0,
+                'status' => 'in_progress',
+                'message' => 'Starting import process...'
+            ]);
+
             $successCount = 0;
             $errors = [];
 
             foreach ($rows as $index => $row) {
+                // Update progress
+                $importProgressService->setProgress($jobId, [
+                    'total_rows' => $totalRows,
+                    'processed_rows' => $index + 1,
+                    'successful_imports' => $successCount,
+                    'failed_imports' => count($errors),
+                    'status' => 'in_progress',
+                    'message' => "Processing row " . ($index + 1) . " of {$totalRows}..."
+                ]);
                 // Create associative array with header as keys
                 $rowData = array_combine($header, $row);
 
@@ -496,6 +521,16 @@ class DailyIncomeController extends Controller
                 ]
             );
 
+            // Finalize progress
+            $importProgressService->setProgress($jobId, [
+                'total_rows' => $totalRows,
+                'processed_rows' => $totalRows,
+                'successful_imports' => $successCount,
+                'failed_imports' => count($errors),
+                'status' => 'completed',
+                'message' => "Import completed. {$successCount} records imported, " . count($errors) . " errors."
+            ]);
+
             $message = "Import completed successfully. {$successCount} records imported.";
 
             if (!empty($errors)) {
@@ -513,6 +548,31 @@ class DailyIncomeController extends Controller
                 ->with('error', 'Import failed: ' . $e->getMessage())
                 ->withInput();
         }
+    }
+
+    /**
+     * Get import progress status via AJAX
+     */
+    public function getImportProgress(Request $request)
+    {
+        $jobId = $request->query('job_id');
+
+        if (!$jobId) {
+            return response()->json(['error' => 'Job ID is required'], 400);
+        }
+
+        $importProgressService = app(\App\Services\ImportProgressService::class);
+        $progress = $importProgressService->getProgress($jobId);
+
+        // Calculate percentage
+        $percentage = 0;
+        if ($progress['total_rows'] > 0) {
+            $percentage = ($progress['processed_rows'] / $progress['total_rows']) * 100;
+        }
+
+        $progress['percentage'] = round($percentage, 2);
+
+        return response()->json($progress);
     }
 
     /**
